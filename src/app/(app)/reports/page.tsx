@@ -59,7 +59,7 @@ const handleDownloadPdf = async (reportId: string, fileName: string) => {
             const ratio = imgWidth / imgHeight;
             const contentHeight = contentWidth / ratio;
             
-            if (currentY + contentHeight > pdf.internal.pageSize.getHeight() - margin) {
+            if (currentY > margin && currentY + contentHeight > pdf.internal.pageSize.getHeight() - margin) {
                 pdf.addPage();
                 currentY = margin;
             }
@@ -140,14 +140,19 @@ function StudentReport() {
         setAiAnalysis(null);
     }
     const handleExamChange = (exam: string) => {
+        setAiAnalysis(null);
         setSelectedExams(prev => {
+            const isAllSelected = prev.length === exams.length;
             if (exam === 'all') {
-                return prev.length === exams.length ? [] : exams.map(e => e);
+                return isAllSelected ? [] : exams.map(e => e);
             }
-            const newExams = prev.includes(exam) ? prev.filter(e => e !== exam) : [...prev, exam];
+            const newExams = prev.includes(exam) 
+                ? prev.filter(e => e !== exam)
+                : [...prev, exam];
+
+            if (newExams.length === exams.length) return exams;
             return newExams;
         });
-        setAiAnalysis(null);
     }
 
     const onDownload = async () => {
@@ -208,70 +213,70 @@ function StudentReport() {
                     </Button>
                 </CardContent>
             </Card>
-
-            {(selectedStudentResults.length > 0 && !isGenerating) && (
-                 <Card className="mt-6 print-card">
-                    <CardHeader>
-                        <CardTitle>{selectedStudentName} - Deneme Sonuçları</CardTitle>
-                        <CardDescription>{examNameForTitle}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                         <div className="relative w-full overflow-auto rounded-md border">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Deneme</TableHead>
-                                        <TableHead className="text-right">Türkçe</TableHead>
-                                        <TableHead className="text-right">Mat</TableHead>
-                                        <TableHead className="text-right">Fen</TableHead>
-                                        <TableHead className="text-right">Tarih</TableHead>
-                                        <TableHead className="text-right">Din</TableHead>
-                                        <TableHead className="text-right">İng</TableHead>
-                                        <TableHead className="text-right font-semibold">T.Net</TableHead>
-                                        <TableHead className="text-right font-semibold">Puan</TableHead>
-                                        <TableHead className="text-center">Durum</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {selectedStudentResults.map(result => {
-                                        const status = getStatus(result.toplam_puan);
-                                        return (
-                                            <TableRow key={result.exam_name}>
-                                                <TableCell className="font-medium">{result.exam_name}</TableCell>
-                                                <TableCell className="text-right">{result.turkce_net.toFixed(2)}</TableCell>
-                                                <TableCell className="text-right">{result.mat_net.toFixed(2)}</TableCell>
-                                                <TableCell className="text-right">{result.fen_net.toFixed(2)}</TableCell>
-                                                <TableCell className="text-right">{result.tarih_net.toFixed(2)}</TableCell>
-                                                <TableCell className="text-right">{result.din_net.toFixed(2)}</TableCell>
-                                                <TableCell className="text-right">{result.ing_net.toFixed(2)}</TableCell>
-                                                <TableCell className="text-right font-medium">{result.toplam_net.toFixed(2)}</TableCell>
-                                                <TableCell className="text-right font-bold text-primary">{result.toplam_puan.toFixed(2)}</TableCell>
-                                                <TableCell className="text-center">
-                                                    <Badge variant={status.variant} className={cn(
-                                                        status.label === 'Çok İyi' && 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200',
-                                                        status.label === 'İyi' && 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200',
-                                                        status.label === 'Orta' && 'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200',
-                                                        status.label === 'Zayıf' && 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200'
-                                                    )}>{status.label}</Badge>
-                                                </TableCell>
-                                            </TableRow>
-                                        )
-                                    })}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    </CardContent>
-                 </Card>
-            )}
-
-            {isGenerating && (
-                <div className="mt-6 flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                    <Loader2 className="h-8 w-8 animate-spin" />
-                    <p>AI Raporu oluşturuluyor...</p>
-                </div>
-            )}
             
             <div id="student-report-content" className="print-container mt-6 space-y-6">
+                {(selectedStudentResults.length > 0 && !isGenerating) && (
+                     <Card className="mt-6 print-card">
+                        <CardHeader>
+                            <CardTitle>{selectedStudentName} - Deneme Sonuçları</CardTitle>
+                            <CardDescription>{examNameForTitle}</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                             <div className="relative w-full overflow-auto rounded-md border">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Deneme</TableHead>
+                                            <TableHead className="text-right">Türkçe</TableHead>
+                                            <TableHead className="text-right">Mat</TableHead>
+                                            <TableHead className="text-right">Fen</TableHead>
+                                            <TableHead className="text-right">Tarih</TableHead>
+                                            <TableHead className="text-right">Din</TableHead>
+                                            <TableHead className="text-right">İng</TableHead>
+                                            <TableHead className="text-right font-semibold">T.Net</TableHead>
+                                            <TableHead className="text-right font-semibold">Puan</TableHead>
+                                            <TableHead className="text-center">Durum</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {selectedStudentResults.map(result => {
+                                            const status = getStatus(result.toplam_puan);
+                                            return (
+                                                <TableRow key={result.exam_name}>
+                                                    <TableCell className="font-medium">{result.exam_name}</TableCell>
+                                                    <TableCell className="text-right">{result.turkce_net.toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right">{result.mat_net.toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right">{result.fen_net.toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right">{result.tarih_net.toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right">{result.din_net.toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right">{result.ing_net.toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right font-medium">{result.toplam_net.toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right font-bold text-primary">{result.toplam_puan.toFixed(2)}</TableCell>
+                                                    <TableCell className="text-center">
+                                                        <Badge variant={status.variant} className={cn(
+                                                            status.label === 'Çok İyi' && 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200',
+                                                            status.label === 'İyi' && 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200',
+                                                            status.label === 'Orta' && 'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200',
+                                                            status.label === 'Zayıf' && 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200'
+                                                        )}>{status.label}</Badge>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )
+                                        })}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </CardContent>
+                     </Card>
+                )}
+
+                {isGenerating && (
+                    <div className="mt-6 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                        <Loader2 className="h-8 w-8 animate-spin" />
+                        <p>AI Raporu oluşturuluyor...</p>
+                    </div>
+                )}
+            
                 {aiAnalysis && (
                     <>
                         <Card className="print-card">
@@ -381,7 +386,6 @@ function StudentReport() {
                     </>
                 )}
             </div>
-
             {selectedStudentResults.length > 0 && !aiAnalysis && !isGenerating && (
                 <div className='mt-6' />
             )}

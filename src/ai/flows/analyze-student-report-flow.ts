@@ -22,7 +22,7 @@ const StudentExamResultSchema = z.object({
     toplam_net: z.number(),
     toplam_puan: z.number(),
     turkce_d: z.number(), turkce_y: z.number(), turkce_net: z.number(),
-    tarih_d: z.number(), tarih_y: znumber(), tarih_net: z.number(),
+    tarih_d: z.number(), tarih_y: z.number(), tarih_net: z.number(),
     din_d: z.number(), din_y: z.number(), din_net: z.number(),
     ing_d: z.number(), ing_y: z.number(), ing_net: z.number(),
     mat_d: z.number(), mat_y: z.number(), mat_net: z.number(),
@@ -38,9 +38,13 @@ const AnalyzeStudentReportInputSchema = z.object({
 export type AnalyzeStudentReportInput = z.infer<typeof AnalyzeStudentReportInputSchema>;
 
 const AnalyzeStudentReportOutputSchema = z.object({
-  analysis: z
-    .string()
-    .describe('Öğrencinin deneme sınavı verilerinin analizini içeren detaylı rapor.'),
+  summary: z.string().describe('Öğrencinin genel performansını özetleyen bir giriş paragrafı.'),
+  strengths: z.array(z.string()).describe('Öğrencinin güçlü olduğu yönleri ve dersleri listeleyen maddeler.'),
+  areasForImprovement: z.array(z.string()).describe('Öğrencinin gelişmesi gereken alanları ve dersleri listeleyen maddeler.'),
+  roadmap: z.array(z.object({
+    title: z.string().describe('Yol haritası adımının başlığı.'),
+    description: z.string().describe('Yol haritası adımının detaylı açıklaması.'),
+  })).describe('Öğrencinin başarısını artırmak için atılması gereken adımları içeren yol haritası.'),
 });
 export type AnalyzeStudentReportOutput = z.infer<
   typeof AnalyzeStudentReportOutputSchema
@@ -71,16 +75,15 @@ const prompt = ai.definePrompt({
   name: 'analyzeStudentReportPrompt',
   input: {schema: PromptInputSchema},
   output: {schema: AnalyzeStudentReportOutputSchema},
-  prompt: `Sen LGS konusunda uzman bir eğitim danışmanısın. Sana verilen öğrenci bilgilerini ve deneme sınavı sonuçlarını analiz ederek öğrencinin genel durumu hakkında detaylı bir "Genel Değerlendirme" raporu hazırla.
+  prompt: `Sen LGS konusunda uzman bir eğitim danışmanısın. Sana verilen öğrenci bilgilerini ve deneme sınavı sonuçlarını analiz ederek öğrencinin genel durumu hakkında detaylı bir rapor hazırla.
 
-Analizinde aşağıdaki noktalara odaklan:
-1.  **Genel Akademik Performans:** Öğrencinin genel performansını, denemeler arasındaki puan ve net değişimlerini özetle. Yükselişte mi, düşüşte mi yoksa istikrarlı mı olduğunu belirt.
-2.  **Güçlü Yönler:** Öğrencinin istikrarlı bir şekilde başarılı olduğu dersleri ve konuları vurgula. Hangi derslerin netlerinin ortalamanın üzerinde olduğunu belirt.
-3.  **Geliştirilmesi Gereken Alanlar:** Öğrencinin zorlandığı, netlerinin düşük veya değişken olduğu dersleri tespit et. Özellikle LGS'de katsayısı yüksek olan derslerdeki (Matematik, Fen, Türkçe) duruma dikkat çek.
-4.  **Somut Öneriler:** Performansını artırmak için öğrenciye ve velisine yönelik somut, uygulanabilir önerilerde bulun. Örneğin: "Matematik dersinde netleri düşük olduğundan, özellikle 'Cebirsel İfadeler' ve 'Veri Analizi' konularına öncelik vererek ek soru çözümü yapması faydalı olacaktır." veya "Türkçe dersindeki başarısını sürdürmesi için paragraf sorularına yönelik hız kazanma çalışmaları yapabilir."
-5.  **Motivasyon:** Raporu yapıcı, motive edici ve yol gösterici bir dille yaz. Öğrencinin potansiyeline vurgu yap.
+Rapor aşağıdaki gibi yapılandırılmalıdır:
+1.  **summary:** Öğrencinin genel akademik performansını, denemeler arasındaki değişimini ve genel potansiyelini özetleyen bir giriş paragrafı yaz.
+2.  **strengths:** Öğrencinin istikrarlı bir şekilde başarılı olduğu dersleri ve konuları vurgulayan 2-3 maddelik bir liste oluştur.
+3.  **areasForImprovement:** Öğrencinin zorlandığı, netlerinin düşük veya değişken olduğu dersleri tespit eden 2-3 maddelik bir liste oluştur. Özellikle LGS'de katsayısı yüksek olan derslerdeki (Matematik, Fen, Türkçe) duruma dikkat çek.
+4.  **roadmap:** Öğrencinin performansını artırmak için 5-6 adımlık somut ve uygulanabilir bir yol haritası oluştur. Her adımın bir 'title' (başlık) ve 'description' (açıklama) alanı olmalıdır. Başlıklar kısa ve eyleme yönelik olmalı (örn: "Detaylı Konu ve Kazanım Analizi"). Açıklamalar ise bu adımı detaylandırmalıdır.
 
-Rapor sadece "Genel Değerlendirme" başlığı altında tek bir metin paragrafı olarak sunulmalıdır. Maddeleme veya alt başlıklar kullanma.
+Tüm metinleri profesyonel, yapıcı ve motive edici bir dille yaz.
 
 Öğrenci Bilgileri:
 - Ad: {{{studentName}}}
@@ -89,7 +92,7 @@ Rapor sadece "Genel Değerlendirme" başlığı altında tek bir metin paragraf�
 Analiz Edilecek Deneme Sonuçları Özeti:
 {{{examResultsAsText}}}
 
-Lütfen sadece 'analysis' alanını doldurarak bir JSON çıktısı üret. Çıktı, uzun ve detaylı tek bir paragraf olmalıdır.`,
+Lütfen sadece 'summary', 'strengths', 'areasForImprovement' ve 'roadmap' alanlarını doldurarak bir JSON çıktısı üret.`,
 });
 
 const analyzeStudentReportFlow = ai.defineFlow(
@@ -103,5 +106,3 @@ const analyzeStudentReportFlow = ai.defineFlow(
     return output!;
   }
 );
-
-    

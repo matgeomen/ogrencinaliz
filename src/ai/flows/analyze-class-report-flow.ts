@@ -32,7 +32,7 @@ const StudentExamResultSchema = z.object({
 
 const AnalyzeClassReportInputSchema = z.object({
   className: z.string().describe('Analiz edilen sınıfın adı.'),
-  examName: z.string().describe("Analiz edilen deneme sınavı (veya 'Tüm Denemeler')."),
+  examName: z.string().describe("Analiz edilen deneme sınavları."),
   examResults: z.array(StudentExamResultSchema).describe("Sınıftaki öğrencilerin ilgili deneme sınavı sonuçları."),
 });
 export type AnalyzeClassReportInput = z.infer<typeof AnalyzeClassReportInputSchema>;
@@ -59,9 +59,11 @@ export async function analyzeClassReport(
 ): Promise<AnalyzeClassReportOutput> {
   const studentCount = new Set(input.examResults.map(r => r.student_no)).size;
   
-  // Eğer 'Tüm Denemeler' seçildiyse, her öğrencinin ortalamasını al
+  // Birden fazla deneme seçildiyse veya 'Tüm Denemeler' seçildiyse, her öğrencinin ortalamasını al
   let analyzedResults = input.examResults;
-  if (input.examName === 'Tüm Denemeler') {
+  const uniqueExamNames = new Set(input.examResults.map(r => r.exam_name));
+
+  if (uniqueExamNames.size > 1) {
       const studentAverages: { [key: number]: StudentExamResult } = {};
       const studentCounts: { [key: number]: number } = {};
 
@@ -84,14 +86,16 @@ export async function analyzeClassReport(
       Object.keys(studentAverages).forEach(student_no_str => {
           const student_no = Number(student_no_str);
           const count = studentCounts[student_no];
-          studentAverages[student_no].toplam_net /= count;
-          studentAverages[student_no].toplam_puan /= count;
-          studentAverages[student_no].turkce_net /= count;
-          studentAverages[student_no].mat_net /= count;
-          studentAverages[student_no].fen_net /= count;
-          studentAverages[student_no].tarih_net /= count;
-          studentAverages[student_no].din_net /= count;
-          studentAverages[student_no].ing_net /= count;
+          if (count > 0) {
+            studentAverages[student_no].toplam_net /= count;
+            studentAverages[student_no].toplam_puan /= count;
+            studentAverages[student_no].turkce_net /= count;
+            studentAverages[student_no].mat_net /= count;
+            studentAverages[student_no].fen_net /= count;
+            studentAverages[student_no].tarih_net /= count;
+            studentAverages[student_no].din_net /= count;
+            studentAverages[student_no].ing_net /= count;
+          }
       });
       analyzedResults = Object.values(studentAverages);
   }

@@ -146,11 +146,17 @@ function StudentReport() {
             if (exam === 'all') {
                 return isAllSelected ? [] : exams.map(e => e);
             }
-            const newExams = prev.includes(exam) 
+            let newExams = prev.includes(exam) 
                 ? prev.filter(e => e !== exam)
                 : [...prev, exam];
 
-            if (newExams.length === exams.length) return exams;
+            // Filter out 'all' if it exists
+            newExams = newExams.filter(e => e !== 'all');
+
+            if (newExams.length === exams.length) {
+                // all exams are selected individually
+                return exams;
+            }
             return newExams;
         });
     }
@@ -396,7 +402,7 @@ function StudentReport() {
 function ClassReport() {
     const { studentData, classes, exams } = useData();
     const [selectedClass, setSelectedClass] = useState<string>('');
-    const [selectedExam, setSelectedExam] = useState<string>('all');
+    const [selectedExams, setSelectedExams] = useState<string[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
     const [aiAnalysis, setAiAnalysis] = useState<AnalyzeClassReportOutput | null>(null);
@@ -407,12 +413,16 @@ function ClassReport() {
             toast({ title: "Lütfen bir sınıf seçin.", variant: 'destructive' });
             return;
         }
+         if (selectedExams.length === 0) {
+            toast({ title: "Lütfen en az bir deneme seçin.", variant: 'destructive' });
+            return;
+        }
         setIsGenerating(true);
         setAiAnalysis(null);
 
         const classData = studentData.filter(d => 
             d.class === selectedClass && 
-            (selectedExam === 'all' || d.exam_name === selectedExam)
+            (selectedExams.length === exams.length || selectedExams.includes(d.exam_name))
         );
 
         if (classData.length === 0) {
@@ -424,7 +434,7 @@ function ClassReport() {
         try {
             const result = await analyzeClassReport({
                 className: selectedClass,
-                examName: selectedExam === 'all' ? 'Tüm Denemeler' : selectedExam,
+                examName: examNameForTitle,
                 examResults: classData,
             });
             setAiAnalysis(result);
@@ -437,19 +447,37 @@ function ClassReport() {
         }
     }
 
+    const examNameForTitle = selectedExams.length === 0 ? "Deneme Seçilmedi" : selectedExams.length === exams.length ? 'Tüm Denemeler' : selectedExams.join(', ');
+
     const handleClassChange = (c: string) => {
         setSelectedClass(c);
+        setSelectedExams([]);
         setAiAnalysis(null);
     }
-     const handleExamChange = (e: string) => {
-        setSelectedExam(e);
+     const handleExamChange = (exam: string) => {
         setAiAnalysis(null);
+        setSelectedExams(prev => {
+            const isAllSelected = prev.length === exams.length;
+            if (exam === 'all') {
+                return isAllSelected ? [] : exams.map(e => e);
+            }
+             let newExams = prev.includes(exam) 
+                ? prev.filter(e => e !== exam)
+                : [...prev, exam];
+
+            newExams = newExams.filter(e => e !== 'all');
+
+            if (newExams.length === exams.length) {
+                return exams;
+            }
+            return newExams;
+        });
     }
 
     const onDownload = async () => {
         if (!selectedClass) return;
         setIsDownloading(true);
-        const examName = selectedExam === 'all' ? 'tum-denemeler' : selectedExam.replace(/\s+/g, '-').toLowerCase();
+        const examName = examNameForTitle.replace(/\s+/g, '-').toLowerCase();
         await handleDownloadPdf('class-report-content', `${selectedClass}-sinifi-${examName}-rapor`);
         setIsDownloading(false);
     }
@@ -465,15 +493,34 @@ function ClassReport() {
                         </SelectContent>
                     </Select>
                     
-                    <Select value={selectedExam} onValueChange={handleExamChange}>
-                        <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Deneme Seçin"/></SelectTrigger>
-                        <SelectContent>
-                             <SelectItem value='all'>Tüm Denemeler</SelectItem>
-                            {exams.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild disabled={!selectedClass}>
+                            <Button variant="outline" className="w-full sm:w-[200px] justify-between">
+                                Deneme Seçin ({selectedExams.length}) <ChevronDown className="h-4 w-4 opacity-50" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-56">
+                            <DropdownMenuLabel>Deneme Sınavları</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuCheckboxItem
+                                checked={selectedExams.length === exams.length}
+                                onCheckedChange={() => handleExamChange('all')}
+                            >
+                                Tüm Denemeler
+                            </DropdownMenuCheckboxItem>
+                            {exams.map(e => (
+                                <DropdownMenuCheckboxItem
+                                    key={e}
+                                    checked={selectedExams.includes(e)}
+                                    onCheckedChange={() => handleExamChange(e)}
+                                >
+                                    {e}
+                                </DropdownMenuCheckboxItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                     
-                    <Button onClick={handleGenerate} disabled={isGenerating || !selectedClass} className="w-full sm:w-auto">
+                    <Button onClick={handleGenerate} disabled={isGenerating || !selectedClass || selectedExams.length === 0} className="w-full sm:w-auto">
                         {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BrainCircuit className="mr-2 h-4 w-4" />}
                         Rapor Oluştur
                     </Button>
@@ -494,7 +541,7 @@ function ClassReport() {
                                 <div className="flex justify-between items-center">
                                     <div>
                                         <CardTitle>{selectedClass} Sınıfı - AI Raporu</CardTitle>
-                                        <CardDescription>{selectedExam === 'all' ? "Tüm Denemeler" : selectedExam}</CardDescription>
+                                        <CardDescription>{examNameForTitle}</CardDescription>
                                     </div>
                                     <Button variant="outline" size="sm" onClick={onDownload} disabled={isDownloading} className="no-print">
                                         {isDownloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}

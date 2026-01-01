@@ -25,44 +25,53 @@ const getStatus = (score: number): { label: string; variant: "default" | "second
 };
 
 const handleDownloadPdf = async (reportId: string, fileName: string) => {
-    const input = document.getElementById(reportId);
-    if (!input) {
-      console.error('Element not found!');
-      return;
+    const reportElement = document.getElementById(reportId);
+    if (!reportElement) {
+        console.error("Rapor elementi bulunamadı!");
+        return;
     }
 
+    // A4 boyutu mm cinsinden: 210 x 297
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+    const margin = 15;
+    const contentWidth = pdfWidth - margin * 2;
+
     try {
-        const canvas = await html2canvas(input, {
-            scale: 2, // Higher scale for better quality
+        const canvas = await html2canvas(reportElement, {
+            scale: 2,
             useCORS: true,
             logging: false,
+            windowWidth: reportElement.scrollWidth,
+            windowHeight: reportElement.scrollHeight
         });
+
         const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-        const canvasWidth = canvas.width;
-        const canvasHeight = canvas.height;
-        const ratio = canvasWidth / canvasHeight;
-        const width = pdfWidth;
-        const height = width / ratio;
+        const imgWidth = canvas.width;
+        const imgHeight = canvas.height;
         
+        const ratio = imgWidth / imgHeight;
+        const contentHeight = contentWidth / ratio;
+
+        let heightLeft = contentHeight;
         let position = 0;
-        let heightLeft = height;
 
-        pdf.addImage(imgData, 'PNG', 0, position, width, height);
-        heightLeft -= pdfHeight;
+        // İlk sayfayı ekle
+        pdf.addImage(imgData, 'PNG', margin, margin, contentWidth, contentHeight);
+        heightLeft -= (pdfHeight - margin * 2);
 
+        // İçerik sayfaya sığmadıysa yeni sayfalar ekle
         while (heightLeft > 0) {
-            position = heightLeft - height;
+            position = position - (pdfHeight - margin);
             pdf.addPage();
-            pdf.addImage(imgData, 'PNG', 0, position, width, height);
-            heightLeft -= pdfHeight;
+            pdf.addImage(imgData, 'PNG', margin, position + margin, contentWidth, contentHeight);
+            heightLeft -= (pdfHeight - margin);
         }
         
         pdf.save(`${fileName}.pdf`);
     } catch (error) {
-        console.error("Could not generate PDF", error);
+        console.error("PDF oluşturulurken bir hata oluştu:", error);
     }
 };
 
@@ -127,6 +136,7 @@ function StudentReport() {
     }
 
     const onDownload = async () => {
+        if (!selectedStudentName) return;
         setIsDownloading(true);
         await handleDownloadPdf('student-report-content', `${selectedStudentName}-rapor`);
         setIsDownloading(false);
@@ -592,3 +602,5 @@ export default function ReportsPage() {
     </div>
   );
 }
+
+    

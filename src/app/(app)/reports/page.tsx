@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { StudentExamResult } from '@/types';
-import { FileText, Users, Home, Loader2, Printer, BrainCircuit, Lightbulb, TrendingDown, Route, CheckCircle, GraduationCap, HeartHandshake } from 'lucide-react';
+import { FileText, Users, Home, Loader2, Printer, BrainCircuit, Lightbulb, TrendingDown, Route, CheckCircle, GraduationCap, HeartHandshake, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { analyzeStudentReport, AnalyzeStudentReportOutput } from '@/ai/flows/analyze-student-report-flow';
 import { analyzeClassReport, AnalyzeClassReportOutput } from '@/ai/flows/analyze-class-report-flow';
@@ -17,6 +17,8 @@ import { analyzeParentReport, AnalyzeParentReportOutput } from '@/ai/flows/analy
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+
 
 const getStatus = (score: number): { label: string; variant: "default" | "secondary" | "destructive" | "outline" } => {
     if (score >= 400) return { label: 'Çok İyi', variant: 'default' };
@@ -34,7 +36,7 @@ const handleDownloadPdf = async (reportId: string, fileName: string) => {
 
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pdfWidth = pdf.internal.pageSize.getWidth();
-    const margin = 15;
+    const margin = 10;
     const contentWidth = pdfWidth - (margin * 2);
     let currentY = margin;
 
@@ -44,7 +46,7 @@ const handleDownloadPdf = async (reportId: string, fileName: string) => {
     for (const card of cards) {
         try {
             const canvas = await html2canvas(card, {
-                scale: 2,
+                scale: 1.5, // Reduced scale to optimize file size
                 useCORS: true,
                 logging: false,
                 windowWidth: card.scrollWidth,
@@ -63,7 +65,7 @@ const handleDownloadPdf = async (reportId: string, fileName: string) => {
             }
             
             pdf.addImage(imgData, 'PNG', margin, currentY, contentWidth, contentHeight);
-            currentY += contentHeight + 10;
+            currentY += contentHeight + 5; // Add a small gap between cards
 
         } catch(error) {
             console.error("PDF için kart işlenirken hata oluştu:", error);
@@ -78,7 +80,7 @@ function StudentReport() {
     const { studentData, classes, exams } = useData();
     const [selectedClass, setSelectedClass] = useState<string>('');
     const [selectedStudentNo, setSelectedStudentNo] = useState<string>('');
-    const [selectedExam, setSelectedExam] = useState<string>('all');
+    const [selectedExams, setSelectedExams] = useState<string[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
     const [aiAnalysis, setAiAnalysis] = useState<AnalyzeStudentReportOutput | null>(null);
@@ -92,15 +94,15 @@ function StudentReport() {
     }, [studentData, selectedClass]);
     
     const selectedStudentResults = useMemo(() => {
-        if (!selectedStudentNo) return [];
+        if (!selectedStudentNo || selectedExams.length === 0) return [];
         return studentData
-            .filter(s => s.student_no.toString() === selectedStudentNo && (selectedExam === 'all' || s.exam_name === selectedExam))
+            .filter(s => s.student_no.toString() === selectedStudentNo && (selectedExams.includes('all') || selectedExams.includes(s.exam_name)))
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [studentData, selectedStudentNo, selectedExam]);
+    }, [studentData, selectedStudentNo, selectedExams]);
 
     const handleGenerate = async () => {
         if (!selectedStudentNo || selectedStudentResults.length === 0) {
-            toast({ title: "Lütfen bir öğrenci ve verisi olduğundan emin olun.", variant: 'destructive' });
+            toast({ title: "Lütfen bir öğrenci seçin ve en az bir deneme seçili olduğundan emin olun.", variant: 'destructive' });
             return;
         }
         setIsGenerating(true);
@@ -110,7 +112,7 @@ function StudentReport() {
             const result = await analyzeStudentReport({
                 studentName: selectedStudentName || 'Bilinmeyen Öğrenci',
                 className: selectedClass,
-                examName: selectedExam === 'all' ? 'Tüm Denemeler' : selectedExam,
+                examName: examNameForTitle,
                 examResults: selectedStudentResults,
             });
             setAiAnalysis(result);
@@ -124,19 +126,27 @@ function StudentReport() {
     }
     
     const selectedStudentName = studentsInClass.find(s => s.student_no.toString() === selectedStudentNo)?.student_name;
-    const examNameForTitle = selectedExam === 'all' ? 'Tüm Denemeler' : selectedExam;
+    const examNameForTitle = selectedExams.length === 0 ? "Deneme Seçilmedi" : selectedExams.includes('all') || selectedExams.length === exams.length ? 'Tüm Denemeler' : selectedExams.join(', ');
 
     const handleClassChange = (c: string) => {
         setSelectedClass(c);
         setSelectedStudentNo('');
+        setSelectedExams([]);
         setAiAnalysis(null);
     }
     const handleStudentChange = (studentNo: string) => {
         setSelectedStudentNo(studentNo);
+        setSelectedExams([]);
         setAiAnalysis(null);
     }
     const handleExamChange = (exam: string) => {
-        setSelectedExam(exam);
+        setSelectedExams(prev => {
+            if (exam === 'all') {
+                return prev.length === exams.length ? [] : exams.map(e => e);
+            }
+            const newExams = prev.includes(exam) ? prev.filter(e => e !== exam) : [...prev, exam];
+            return newExams;
+        });
         setAiAnalysis(null);
     }
 
@@ -165,20 +175,94 @@ function StudentReport() {
                         </SelectContent>
                     </Select>
 
-                     <Select value={selectedExam} onValueChange={handleExamChange} disabled={!selectedStudentNo}>
-                        <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Deneme Seçin"/></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value='all'>Tüm Denemeler</SelectItem>
-                            {exams.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild disabled={!selectedStudentNo}>
+                            <Button variant="outline" className="w-full sm:w-[200px] justify-between">
+                                Deneme Seçin ({selectedExams.length}) <ChevronDown className="h-4 w-4 opacity-50" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-56">
+                            <DropdownMenuLabel>Deneme Sınavları</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuCheckboxItem
+                                checked={selectedExams.length === exams.length}
+                                onCheckedChange={() => handleExamChange('all')}
+                            >
+                                Tüm Denemeler
+                            </DropdownMenuCheckboxItem>
+                            {exams.map(e => (
+                                <DropdownMenuCheckboxItem
+                                    key={e}
+                                    checked={selectedExams.includes(e)}
+                                    onCheckedChange={() => handleExamChange(e)}
+                                >
+                                    {e}
+                                </DropdownMenuCheckboxItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                     
-                    <Button onClick={handleGenerate} disabled={isGenerating || !selectedStudentNo} className="w-full sm:w-auto">
+                    <Button onClick={handleGenerate} disabled={isGenerating || !selectedStudentNo || selectedExams.length === 0} className="w-full sm:w-auto">
                         {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BrainCircuit className="mr-2 h-4 w-4" />}
                         Rapor Oluştur
                     </Button>
                 </CardContent>
             </Card>
+
+            {(selectedStudentResults.length > 0 && !isGenerating) && (
+                 <Card className="mt-6 print-card">
+                    <CardHeader>
+                        <CardTitle>{selectedStudentName} - Deneme Sonuçları</CardTitle>
+                        <CardDescription>{examNameForTitle}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                         <div className="relative w-full overflow-auto rounded-md border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Deneme</TableHead>
+                                        <TableHead className="text-right">Türkçe</TableHead>
+                                        <TableHead className="text-right">Mat</TableHead>
+                                        <TableHead className="text-right">Fen</TableHead>
+                                        <TableHead className="text-right">Tarih</TableHead>
+                                        <TableHead className="text-right">Din</TableHead>
+                                        <TableHead className="text-right">İng</TableHead>
+                                        <TableHead className="text-right font-semibold">T.Net</TableHead>
+                                        <TableHead className="text-right font-semibold">Puan</TableHead>
+                                        <TableHead className="text-center">Durum</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {selectedStudentResults.map(result => {
+                                        const status = getStatus(result.toplam_puan);
+                                        return (
+                                            <TableRow key={result.exam_name}>
+                                                <TableCell className="font-medium">{result.exam_name}</TableCell>
+                                                <TableCell className="text-right">{result.turkce_net.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right">{result.mat_net.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right">{result.fen_net.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right">{result.tarih_net.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right">{result.din_net.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right">{result.ing_net.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right font-medium">{result.toplam_net.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right font-bold text-primary">{result.toplam_puan.toFixed(2)}</TableCell>
+                                                <TableCell className="text-center">
+                                                    <Badge variant={status.variant} className={cn(
+                                                        status.label === 'Çok İyi' && 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200',
+                                                        status.label === 'İyi' && 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200',
+                                                        status.label === 'Orta' && 'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200',
+                                                        status.label === 'Zayıf' && 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200'
+                                                    )}>{status.label}</Badge>
+                                                </TableCell>
+                                            </TableRow>
+                                        )
+                                    })}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </CardContent>
+                 </Card>
+            )}
 
             {isGenerating && (
                 <div className="mt-6 flex flex-col items-center justify-center gap-2 text-muted-foreground">
@@ -299,57 +383,7 @@ function StudentReport() {
             </div>
 
             {selectedStudentResults.length > 0 && !aiAnalysis && !isGenerating && (
-                 <Card className="mt-6">
-                    <CardHeader>
-                        <CardTitle>{selectedStudentName} - Deneme Sonuçları ({examNameForTitle})</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                         <div className="relative w-full overflow-auto rounded-md border">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Deneme</TableHead>
-                                        <TableHead className="text-right">Türkçe</TableHead>
-                                        <TableHead className="text-right">Mat</TableHead>
-                                        <TableHead className="text-right">Fen</TableHead>
-                                        <TableHead className="text-right">Tarih</TableHead>
-                                        <TableHead className="text-right">Din</TableHead>
-                                        <TableHead className="text-right">İng</TableHead>
-                                        <TableHead className="text-right font-semibold">T.Net</TableHead>
-                                        <TableHead className="text-right font-semibold">Puan</TableHead>
-                                        <TableHead className="text-center">Durum</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {selectedStudentResults.map(result => {
-                                        const status = getStatus(result.toplam_puan);
-                                        return (
-                                            <TableRow key={result.exam_name}>
-                                                <TableCell className="font-medium">{result.exam_name}</TableCell>
-                                                <TableCell className="text-right">{result.turkce_net.toFixed(2)}</TableCell>
-                                                <TableCell className="text-right">{result.mat_net.toFixed(2)}</TableCell>
-                                                <TableCell className="text-right">{result.fen_net.toFixed(2)}</TableCell>
-                                                <TableCell className="text-right">{result.tarih_net.toFixed(2)}</TableCell>
-                                                <TableCell className="text-right">{result.din_net.toFixed(2)}</TableCell>
-                                                <TableCell className="text-right">{result.ing_net.toFixed(2)}</TableCell>
-                                                <TableCell className="text-right font-medium">{result.toplam_net.toFixed(2)}</TableCell>
-                                                <TableCell className="text-right font-bold text-primary">{result.toplam_puan.toFixed(2)}</TableCell>
-                                                <TableCell className="text-center">
-                                                    <Badge variant={status.variant} className={cn(
-                                                        status.label === 'Çok İyi' && 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200',
-                                                        status.label === 'İyi' && 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200',
-                                                        status.label === 'Orta' && 'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200',
-                                                        status.label === 'Zayıf' && 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200'
-                                                    )}>{status.label}</Badge>
-                                                </TableCell>
-                                            </TableRow>
-                                        )
-                                    })}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    </CardContent>
-                 </Card>
+                <div className='mt-6' />
             )}
         </div>
     );

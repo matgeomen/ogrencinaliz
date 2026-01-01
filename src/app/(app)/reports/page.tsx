@@ -31,16 +31,9 @@ const handleDownloadPdf = async (reportId: string, fileName: string) => {
         return;
     }
 
-    // A4 boyutu mm cinsinden: 210 x 297
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = pdf.internal.pageSize.getHeight();
-    const margin = 15;
-    const contentWidth = pdfWidth - margin * 2;
-
     try {
         const canvas = await html2canvas(reportElement, {
-            scale: 2,
+            scale: 2, // Daha iyi çözünürlük için
             useCORS: true,
             logging: false,
             windowWidth: reportElement.scrollWidth,
@@ -51,6 +44,14 @@ const handleDownloadPdf = async (reportId: string, fileName: string) => {
         const imgWidth = canvas.width;
         const imgHeight = canvas.height;
         
+        // A4 boyutu (mm) ve kenar boşlukları
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const margin = 15;
+        const contentWidth = pdfWidth - margin * 2;
+        
+        // Görüntü oranını koruyarak yüksekliği hesapla
         const ratio = imgWidth / imgHeight;
         const contentHeight = contentWidth / ratio;
 
@@ -63,10 +64,11 @@ const handleDownloadPdf = async (reportId: string, fileName: string) => {
 
         // İçerik sayfaya sığmadıysa yeni sayfalar ekle
         while (heightLeft > 0) {
-            position = position - (pdfHeight - margin);
+            position = position - (pdfHeight - margin*2); // Sonraki sayfanın başlangıç pozisyonu
             pdf.addPage();
+            // Aynı resmi, dikeyde kaydırarak yeni sayfaya ekle
             pdf.addImage(imgData, 'PNG', margin, position + margin, contentWidth, contentHeight);
-            heightLeft -= (pdfHeight - margin);
+            heightLeft -= (pdfHeight - margin*2);
         }
         
         pdf.save(`${fileName}.pdf`);

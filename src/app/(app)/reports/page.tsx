@@ -443,6 +443,29 @@ function ClassReport() {
                             </CardContent>
                         </Card>
                     )}
+                    {aiAnalysis.recommendations && aiAnalysis.recommendations.length > 0 && (
+                         <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <GraduationCap className="h-5 w-5 text-primary"/>
+                                    Öneriler
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-4">
+                                    {aiAnalysis.recommendations.map((item, index) => (
+                                        <div key={index} className="flex items-start gap-3 p-3 bg-secondary/50 rounded-lg">
+                                             <Lightbulb className="h-5 w-5 mt-1 text-yellow-500 shrink-0"/>
+                                            <div>
+                                                <p className="font-semibold">{item.title}</p>
+                                                <p className="text-sm text-muted-foreground">{item.description}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
                  </div>
             )}
         </div>

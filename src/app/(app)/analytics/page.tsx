@@ -3,24 +3,23 @@
 import { useMemo, useState } from 'react';
 import { useData } from '@/contexts/data-context';
 import { PageHeader } from '@/components/page-header';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
-import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, PieChart, Pie, Cell, Legend, Tooltip } from 'recharts';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { generateAiAssessmentReport } from '@/ai/flows/generate-ai-assessment-report';
-import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
 
-const PIE_COLORS = ['#16a34a', '#f97316', '#ef4444', '#3b82f6'];
+const PIE_COLORS = {
+  '400-500': '#3b82f6',
+  '300-400': '#16a34a',
+  '200-300': '#f97316',
+  '100-200': '#ef4444',
+  '0-100': '#dc2626',
+};
+
 
 export default function AnalyticsPage() {
   const { studentData, selectedExam, classes, loading } = useData();
   const [selectedClass, setSelectedClass] = useState('all');
-  const [aiReport, setAiReport] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const { toast } = useToast();
 
   const filteredData = useMemo(() => {
     return studentData.filter(d => 
@@ -43,62 +42,33 @@ export default function AnalyticsPage() {
 
     return lessons.map(lesson => ({
       subject: lesson.subject,
-      A: parseFloat(((filteredData.reduce((acc, s) => acc + s[lesson.key], 0) / total)).toFixed(2)),
+      A: parseFloat(((filteredData.reduce((acc, s) => acc + s[lesson.key as keyof typeof s], 0) / total)).toFixed(2)),
       fullMark: lesson.max,
     }));
   }, [filteredData]);
 
   const pieData = useMemo(() => {
-     if (filteredData.length === 0) return [];
+    if (filteredData.length === 0) return [];
     const ranges = [
-      { name: 'Başarılı (75% - 100%)', min: 0.75, max: 1.01, count: 0 },
-      { name: 'Orta (50% - 74%)', min: 0.50, max: 0.75, count: 0 },
-      { name: 'Gelişmeli (0% - 49%)', min: 0, max: 0.50, count: 0 },
+      { name: '400-500', min: 400, max: 500.01, count: 0 },
+      { name: '300-400', min: 300, max: 400, count: 0 },
+      { name: '200-300', min: 200, max: 300, count: 0 },
+      { name: '100-200', min: 100, max: 200, count: 0 },
+      { name: '0-100', min: 0, max: 100, count: 0 },
     ];
     filteredData.forEach(student => {
-      const successRatio = student.toplam_net / 90;
-      const range = ranges.find(r => successRatio >= r.min && successRatio < r.max);
+      const range = ranges.find(r => student.toplam_puan >= r.min && student.toplam_puan < r.max);
       if (range) range.count++;
     });
     return ranges.filter(r => r.count > 0).map(r => ({ name: r.name, value: r.count }));
   }, [filteredData]);
 
-  const handleGenerateReport = async () => {
-    if (filteredData.length === 0) {
-      toast({
-        variant: "destructive",
-        title: "Rapor Oluşturulamadı",
-        description: "Analiz için yeterli veri bulunamadı.",
-      });
-      return;
-    }
-    setIsGenerating(true);
-    setAiReport('');
-    try {
-      const result = await generateAiAssessmentReport({
-        classData: JSON.stringify(filteredData),
-        examName: selectedExam
-      });
-      setAiReport(result.report);
-    } catch (error) {
-      console.error("AI report generation failed:", error);
-      toast({
-        variant: "destructive",
-        title: "Hata",
-        description: "Yapay zeka raporu oluşturulurken bir hata oluştu.",
-      });
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Analizler" description="Sınıf ve ders bazında performans analizleri." />
+      <PageHeader title="Analizler" description={`${selectedExam} analizi`} />
 
       <div className="flex items-center space-x-4">
-        <label htmlFor="class-filter" className="font-medium">Sınıf Filtresi:</label>
         <Select value={selectedClass} onValueChange={setSelectedClass}>
           <SelectTrigger id="class-filter" className="w-[180px]">
             <SelectValue placeholder="Sınıf Seç" />
@@ -115,7 +85,6 @@ export default function AnalyticsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Ders Bazlı Başarı</CardTitle>
-              <CardDescription>Seçili grup için derslerin ortalama net başarısı.</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -124,7 +93,8 @@ export default function AnalyticsPage() {
                   <PolarAngleAxis dataKey="subject" />
                   <PolarRadiusAxis angle={30} domain={[0, 20]} />
                   <Radar name="Ortalama Net" dataKey="A" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.6} />
-                  <Tooltip />
+                  <Tooltip contentStyle={{ background: "hsl(var(--background))", border: "1px solid hsl(var(--border))", borderRadius: "var(--radius)"}}/>
+                  <Legend />
                 </RadarChart>
               </ResponsiveContainer>
             </CardContent>
@@ -132,17 +102,16 @@ export default function AnalyticsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Başarı Dağılımı</CardTitle>
-               <CardDescription>Öğrencilerin toplam nete göre başarı dilimleri.</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
-                    {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                    {pieData.map((entry) => (
+                      <Cell key={`cell-${entry.name}`} fill={PIE_COLORS[entry.name as keyof typeof PIE_COLORS]} />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip contentStyle={{ background: "hsl(var(--background))", border: "1px solid hsl(var(--border))", borderRadius: "var(--radius)"}}/>
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -150,33 +119,6 @@ export default function AnalyticsPage() {
           </Card>
         </div>
       )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Yapay Zeka Destekli Analiz Raporu</CardTitle>
-          <CardDescription>Seçili deneme ve sınıf için yapay zeka tarafından oluşturulan detaylı analiz raporu.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isGenerating ? (
-             <div className="flex items-center justify-center h-48">
-                <Loader2 className="mr-2 h-8 w-8 animate-spin" />
-                <p className="text-muted-foreground">Rapor oluşturuluyor...</p>
-             </div>
-          ) : aiReport ? (
-            <Textarea readOnly value={aiReport} className="h-48 whitespace-pre-wrap" />
-          ) : (
-            <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg">
-                <p className="text-muted-foreground">Rapor oluşturmak için butona tıklayın.</p>
-            </div>
-          )}
-        </CardContent>
-        <CardFooter>
-          <Button onClick={handleGenerateReport} disabled={isGenerating || loading}>
-            {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Rapor Oluştur
-          </Button>
-        </CardFooter>
-      </Card>
     </div>
   );
 }

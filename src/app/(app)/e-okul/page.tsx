@@ -59,14 +59,15 @@ export default function EOkulPage() {
     let textContent = '';
 
     try {
-        if (file.name.endsWith('.pdf')) {
-            const pdf = await pdfjsLib.getDocument(URL.createObjectURL(file)).promise;
+        if (file.type === 'application/pdf') {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
             for (let i = 1; i <= pdf.numPages; i++) {
                 const page = await pdf.getPage(i);
                 const text = await page.getTextContent();
                 textContent += text.items.map(item => ('str' in item ? item.str : '')).join(' ');
             }
-        } else if (file.name.endsWith('.html') || file.name.endsWith('.htm') || file.name.endsWith('.xlsx')) {
+        } else if (file.type === 'text/html' || file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
              textContent = await file.text();
         } else {
             throw new Error("Desteklenmeyen dosya formatı.");
@@ -185,7 +186,7 @@ export default function EOkulPage() {
                           <AlertTitle className="text-yellow-800 dark:text-yellow-300">Önemli Not:</AlertTitle>
                           <AlertDescription className="text-yellow-700 dark:text-yellow-300/80 text-sm">
                             Güvenlik nedeniyle şu an için dosya yükleme yöntemini kullanmanızı öneriyoruz. Otomatik giriş özelliği geliştirme aşamasındadır.
-                          </AlertDescription>
+                          </GAlertDescription>
                         </Alert>
 
                         <div className="space-y-4">

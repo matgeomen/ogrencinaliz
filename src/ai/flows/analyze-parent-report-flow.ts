@@ -25,7 +25,7 @@ const StudentExamResultSchema = z.object({
     tarih_d: z.number(), tarih_y: z.number(), tarih_net: z.number(),
     din_d: z.number(), din_y: z.number(), din_net: z.number(),
     ing_d: z.number(), ing_y: z.number(), ing_net: z.number(),
-    mat_d: z.number(), mat_y: z.number(), mat_net: z.number(),
+    mat_d: z.number(), mat_y: z_number(), mat_net: z.number(),
     fen_d: z.number(), fen_y: z.number(), fen_net: z.number(),
 });
 

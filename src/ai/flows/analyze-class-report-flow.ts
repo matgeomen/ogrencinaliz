@@ -72,6 +72,12 @@ export async function analyzeClassReport(
           }
           studentAverages[r.student_no].toplam_net += r.toplam_net;
           studentAverages[r.student_no].toplam_puan += r.toplam_puan;
+          studentAverages[r.student_no].turkce_net += r.turkce_net;
+          studentAverages[r.student_no].mat_net += r.mat_net;
+          studentAverages[r.student_no].fen_net += r.fen_net;
+          studentAverages[r.student_no].tarih_net += r.tarih_net;
+          studentAverages[r.student_no].din_net += r.din_net;
+          studentAverages[r.student_no].ing_net += r.ing_net;
           studentCounts[r.student_no]++;
       });
 
@@ -80,17 +86,35 @@ export async function analyzeClassReport(
           const count = studentCounts[student_no];
           studentAverages[student_no].toplam_net /= count;
           studentAverages[student_no].toplam_puan /= count;
+          studentAverages[student_no].turkce_net /= count;
+          studentAverages[student_no].mat_net /= count;
+          studentAverages[student_no].fen_net /= count;
+          studentAverages[student_no].tarih_net /= count;
+          studentAverages[student_no].din_net /= count;
+          studentAverages[student_no].ing_net /= count;
       });
       analyzedResults = Object.values(studentAverages);
   }
 
+  const entryCount = analyzedResults.length;
+  if (entryCount === 0) {
+    // Should not happen based on `reports/page.tsx` logic but as a safeguard.
+    throw new Error("No data available for analysis.");
+  }
+  
   const totalNet = analyzedResults.reduce((sum, r) => sum + r.toplam_net, 0);
   const totalScore = analyzedResults.reduce((sum, r) => sum + r.toplam_puan, 0);
-  const entryCount = analyzedResults.length;
-  const avgNet = entryCount > 0 ? (totalNet / entryCount) : 0;
-  const avgScore = entryCount > 0 ? (totalScore / entryCount) : 0;
+  const avgNet = totalNet / entryCount;
+  const avgScore = totalScore / entryCount;
+  
+  const avgTurkceNet = analyzedResults.reduce((sum, r) => sum + r.turkce_net, 0) / entryCount;
+  const avgMatNet = analyzedResults.reduce((sum, r) => sum + r.mat_net, 0) / entryCount;
+  const avgFenNet = analyzedResults.reduce((sum, r) => sum + r.fen_net, 0) / entryCount;
+  const avgTarihNet = analyzedResults.reduce((sum, r) => sum + r.tarih_net, 0) / entryCount;
+  const avgDinNet = analyzedResults.reduce((sum, r) => sum + r.din_net, 0) / entryCount;
+  const avgIngNet = analyzedResults.reduce((sum, r) => sum + r.ing_net, 0) / entryCount;
 
-  const summaryText = `Sınıfta ${studentCount} öğrenci bulunmaktadır. Analiz edilen "${input.examName}" kapsamındaki verilere göre sınıfın genel net ortalaması ${avgNet.toFixed(2)}, puan ortalaması ise ${avgScore.toFixed(2)}'dir.`;
+  const summaryText = `Sınıfta ${studentCount} öğrenci bulunmaktadır. Analiz edilen "${input.examName}" kapsamındaki verilere göre sınıfın genel net ortalaması ${avgNet.toFixed(2)}, puan ortalaması ise ${avgScore.toFixed(2)}'dir. Ders bazlı ortalama netler: Türkçe ${avgTurkceNet.toFixed(2)}, Matematik ${avgMatNet.toFixed(2)}, Fen Bilimleri ${avgFenNet.toFixed(2)}, T.C. İnkılap Tarihi ${avgTarihNet.toFixed(2)}, Din Kültürü ${avgDinNet.toFixed(2)}, İngilizce ${avgIngNet.toFixed(2)}.`;
 
   return analyzeClassReportFlow({
     className: input.className,
@@ -112,7 +136,7 @@ const prompt = ai.definePrompt({
   prompt: `Sen LGS konusunda uzman bir eğitim danışmanısın. Sana verilen sınıf bilgilerini ve deneme sınavı sonuçları özetini analiz ederek sınıfın genel durumu hakkında detaylı bir rapor hazırla.
 
 Rapor aşağıdaki gibi yapılandırılmalıdır:
-1.  **summary:** Sınıfın genel akademik performansını, deneme ortalamalarını ve genel potansiyelini değerlendiren bir paragraf yaz.
+1.  **summary:** Sınıfın genel akademik performansını, deneme ortalamalarını ve genel potansiyelini değerlendiren bir paragraf yaz. Sana verilen özet metnini yorumlayarak başla.
 2.  **strengths:** Sınıfın bir bütün olarak başarılı olduğu, ortalamalarının yüksek olduğu dersleri veya konuları vurgulayan 2-3 maddelik bir liste oluştur.
 3.  **areasForImprovement:** Sınıfın genel olarak zorlandığı, net ortalamalarının düşük olduğu dersleri veya konuları tespit eden 2-3 maddelik bir liste oluştur. Özellikle LGS'de katsayısı yüksek olan derslerdeki (Matematik, Fen, Türkçe) genel duruma dikkat çek.
 4.  **roadmap:** Sınıfın kolektif performansını artırmak için 5-6 adımlık somut ve uygulanabilir bir yol haritası oluştur. Her adımın bir 'title' (başlık) ve 'description' (açıklama) alanı olmalıdır. Başlıklar kısa ve eyleme yönelik olmalı (örn: "Detaylı Konu ve Kazanım Analizi"). Açıklamalar ise bu adımı detaylandırmalıdır.
@@ -124,7 +148,7 @@ Sınıf Bilgileri:
 - Sınıf Adı: {{{className}}}
 - Analiz Edilen Deneme: {{{examName}}}
 
-Sınıf Özeti:
+Sınıf Özeti ve Ortalama Netler:
 {{{classSummary}}}
 
 Lütfen sadece 'summary', 'strengths', 'areasForImprovement', 'roadmap' ve 'recommendations' alanlarını doldurarak bir JSON çıktısı üret.`,

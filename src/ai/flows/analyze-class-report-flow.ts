@@ -38,10 +38,13 @@ const AnalyzeClassReportInputSchema = z.object({
 export type AnalyzeClassReportInput = z.infer<typeof AnalyzeClassReportInputSchema>;
 
 const AnalyzeClassReportOutputSchema = z.object({
-  recommendations: z.array(z.object({
-    title: z.string().describe("Önerinin başlığı, kalın formatta."),
-    description: z.string().describe("Önerinin detaylı açıklaması.")
-  })).describe("Sınıfın genel başarısını artırmak için 7-8 maddelik somut, uygulanabilir pedagojik öneri listesi.")
+  summary: z.string().describe('Sınıfın genel durumunu özetleyen bir paragraf.'),
+  strengths: z.array(z.string()).describe('Sınıfın kolektif olarak güçlü olduğu dersleri ve alanları belirten 2-3 madde.'),
+  areasForImprovement: z.array(z.string()).describe('Sınıfın kolektif olarak desteklenmesi gereken dersleri veya konuları belirten 2-3 madde.'),
+  roadmap: z.array(z.object({
+    title: z.string().describe('Yol haritası adımının başlığı.'),
+    description: z.string().describe('Adımın detaylı açıklaması.'),
+  })).describe("Sınıfın genel başarısını artırmak için atılması gereken adımları içeren 3-4 adımlık bir yol haritası.")
 });
 export type AnalyzeClassReportOutput = z.infer<
   typeof AnalyzeClassReportOutputSchema
@@ -128,21 +131,15 @@ const prompt = ai.definePrompt({
   name: 'analyzeClassReportPrompt',
   input: {schema: PromptInputSchema},
   output: {schema: AnalyzeClassReportOutputSchema},
-  prompt: `Sen LGS konusunda uzman bir eğitim danışmanısın. Sana verilen sınıf bilgilerini ve deneme sınavı sonuçları özetini analiz ederek, o sınıfın genel akademik başarısını artırmak için somut ve uygulanabilir pedagojik önerilerde bulun.
+  prompt: `Sen LGS konusunda uzman bir eğitim danışmanısın. Sana verilen sınıf bilgilerini ve deneme sınavı sonuçları özetini analiz ederek, o sınıfın kolektif başarısı hakkında bir rapor hazırla.
 
-Yaklaşık 7-8 maddelik bir öneri listesi oluştur. Her önerinin bir 'title' (başlık) ve 'description' (açıklama) alanı olmalıdır. Başlıklar eyleme yönelik ve dikkat çekici olmalı.
+Rapor aşağıdaki gibi yapılandırılmalıdır:
+1.  **summary:** Sınıfın genel akademik durumunu, ortalamalarını ve potansiyelini özetleyen bir giriş paragrafı yaz.
+2.  **strengths:** Sınıfın bir bütün olarak en başarılı olduğu dersleri veya konuları vurgulayan 2-3 maddelik bir liste oluştur.
+3.  **areasForImprovement:** Sınıfın genel olarak zorlandığı, ortalamanın düşük olduğu dersleri veya konuları tespit eden 2-3 maddelik bir liste oluştur.
+4.  **roadmap:** Sınıfın kolektif başarısını artırmak için öğretmenlerin ve yönetimin atabileceği 3-4 adımlık somut ve uygulanabilir bir yol haritası oluştur. Her adım için bir 'title' ve 'description' alanı olmalıdır.
 
-Önerilerin aşağıdaki gibi konuları kapsayabilir:
-- Bireysel çalışma planları ve kişiselleştirilmiş öğrenme.
-- Yanlış analizi teknikleri ve hatalardan öğrenme.
-- Okuma anlama ve yorumlama becerilerini geliştirme.
-- Aktif katılımı ve soru sorma kültürünü teşvik etme.
-- Öğretmenler arası iş birliği ve koordinasyon.
-- Veli-öğretmen iş birliğinin güçlendirilmesi.
-- Dijital kaynakların ve eğitim teknolojilerinin etkin kullanımı.
-- Motivasyon ve sınav kaygısıyla başa çıkma stratejileri.
-
-Tüm metni profesyonel, yapıcı ve yol gösterici bir dille yaz. Analizini, sınıfın kolektif başarısını artırmaya yönelik içgörüler sunacak şekilde odakla.
+Tüm metni profesyonel, yapıcı ve yol gösterici bir dille yaz.
 
 Sınıf Bilgileri:
 - Sınıf Adı: {{{className}}}
@@ -151,7 +148,7 @@ Sınıf Bilgileri:
 Sınıf Özeti ve Ortalama Netler:
 {{{classSummary}}}
 
-Lütfen sadece 'recommendations' alanını doldurarak bir JSON çıktısı üret.`,
+Lütfen sadece 'summary', 'strengths', 'areasForImprovement' ve 'roadmap' alanlarını doldurarak bir JSON çıktısı üret.`,
 });
 
 const analyzeClassReportFlow = ai.defineFlow(

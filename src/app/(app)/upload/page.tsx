@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -14,8 +14,7 @@ import { analyzeEokulData } from '@/ai/flows/analyze-eokul-data';
 import { Textarea } from '@/components/ui/textarea';
 
 // Dynamically import pdfjs-dist to avoid SSR issues
-const pdfjsPromise = import('pdfjs-dist/build/pdf');
-import('pdfjs-dist/build/pdf.worker.entry');
+const pdfjsPromise = import('pdfjs-dist');
 
 
 export default function UploadPage() {
@@ -24,6 +23,12 @@ export default function UploadPage() {
   const [pdfAnalysis, setPdfAnalysis] = useState('');
   const { toast } = useToast();
   const { addStudentData } = useData();
+
+  useEffect(() => {
+    pdfjsPromise.then(pdfjs => {
+      pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
+    });
+  }, []);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     setFiles(prev => [...prev, ...acceptedFiles]);
@@ -179,7 +184,7 @@ export default function UploadPage() {
             <CardHeader>
                 <CardTitle>PDF Analiz Sonucu</CardTitle>
                 <CardDescription>Yüklenen PDF dosyasının yapay zeka tarafından yapılan analizi.</CardDescription>
-            </CardHeader>
+            </Header>
             <CardContent>
                 <Textarea value={pdfAnalysis} readOnly className="h-64 whitespace-pre-wrap" />
             </CardContent>

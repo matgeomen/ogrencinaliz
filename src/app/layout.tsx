@@ -3,8 +3,8 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
-  title: 'LGS Takip',
-  description: 'LGS Öğrenci Takip Sistemi',
+  title: 'Öğrenci Takip',
+  description: 'Öğrenci Takip Sistemi',
 };
 
 export default function RootLayout({

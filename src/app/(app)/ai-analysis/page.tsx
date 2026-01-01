@@ -152,14 +152,36 @@ export default function AiAnalysisPage() {
         )
     }
 
-    const { summary, strengths, areasForImprovement, roadmap, recommendations } = analysisResult as any;
+    if (analysisType === 'class') {
+      const { analysis } = analysisResult as AnalyzeClassReportOutput;
+      return (
+        <Card>
+          <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                  <BrainCircuit className="h-5 w-5 text-primary" />
+                  {selectedClass} Sınıfı - AI Değerlendirmesi
+              </CardTitle>
+              <CardDescription>{examNameForTitle}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+              {analysis.split('\n').map((paragraph, index) => (
+                  <p key={index} className="text-sm text-muted-foreground leading-relaxed">
+                      {paragraph}
+                  </p>
+              ))}
+          </CardContent>
+        </Card>
+      );
+    }
+
+    const { summary, strengths, areasForImprovement, roadmap, recommendations } = analysisResult as AnalyzeStudentReportOutput;
 
     return (
         <div className="space-y-6">
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                        {analysisType === 'student' ? `${selectedStudentName} - AI Değerlendirmesi` : `${selectedClass} Sınıfı - AI Değerlendirmesi`}
+                        {`${selectedStudentName} - AI Değerlendirmesi`}
                     </CardTitle>
                     <CardDescription>{examNameForTitle}</CardDescription>
                 </CardHeader>
@@ -289,5 +311,3 @@ export default function AiAnalysisPage() {
     </div>
   );
 }
-
-    

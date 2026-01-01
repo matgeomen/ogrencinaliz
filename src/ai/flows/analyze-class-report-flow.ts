@@ -38,17 +38,7 @@ const AnalyzeClassReportInputSchema = z.object({
 export type AnalyzeClassReportInput = z.infer<typeof AnalyzeClassReportInputSchema>;
 
 const AnalyzeClassReportOutputSchema = z.object({
-  summary: z.string().describe('Sınıfın genel performansını, ortalamalarını ve potansiyelini özetleyen bir giriş paragrafı.'),
-  strengths: z.array(z.string()).describe('Sınıfın genel olarak güçlü olduğu yönleri ve dersleri listeleyen maddeler.'),
-  areasForImprovement: z.array(z.string()).describe('Sınıfın genel olarak gelişmesi gereken alanları ve dersleri listeleyen maddeler.'),
-  roadmap: z.array(z.object({
-    title: z.string().describe('Yol haritası adımının başlığı.'),
-    description: z.string().describe('Yol haritası adımının detaylı açıklaması.'),
-  })).describe('Sınıfın başarısını artırmak için atılması gereken adımları içeren yol haritası.'),
-  recommendations: z.array(z.object({
-    title: z.string().describe('Öneri başlığı.'),
-    description: z.string().describe('Önerinin detaylı açıklaması.'),
-  })).describe('Sınıfın genel başarısını ve motivasyonunu artırmak için ek öneriler.'),
+  analysis: z.string().describe("Sınıfın genel performansını, güçlü ve zayıf yönlerini, potansiyelini ve gelişim için önerileri içeren bütüncül bir analiz metni. Metin, paragraflar halinde yapılandırılmalıdır."),
 });
 export type AnalyzeClassReportOutput = z.infer<
   typeof AnalyzeClassReportOutputSchema
@@ -59,7 +49,6 @@ export async function analyzeClassReport(
 ): Promise<AnalyzeClassReportOutput> {
   const studentCount = new Set(input.examResults.map(r => r.student_no)).size;
   
-  // Birden fazla deneme seçildiyse veya 'Tüm Denemeler' seçildiyse, her öğrencinin ortalamasını al
   let analyzedResults = input.examResults;
   const uniqueExamNames = new Set(input.examResults.map(r => r.exam_name));
 
@@ -94,7 +83,7 @@ export async function analyzeClassReport(
             studentAverages[student_no].fen_net /= count;
             studentAverages[student_no].tarih_net /= count;
             studentAverages[student_no].din_net /= count;
-            studentAverages[student_no].ing_net /= count;
+            studentAverages[r.student_no].ing_net /= count;
           }
       });
       analyzedResults = Object.values(studentAverages);
@@ -102,7 +91,6 @@ export async function analyzeClassReport(
 
   const entryCount = analyzedResults.length;
   if (entryCount === 0) {
-    // Should not happen based on `reports/page.tsx` logic but as a safeguard.
     throw new Error("No data available for analysis.");
   }
   
@@ -137,16 +125,15 @@ const prompt = ai.definePrompt({
   name: 'analyzeClassReportPrompt',
   input: {schema: PromptInputSchema},
   output: {schema: AnalyzeClassReportOutputSchema},
-  prompt: `Sen LGS konusunda uzman bir eğitim danışmanısın. Sana verilen sınıf bilgilerini ve deneme sınavı sonuçları özetini analiz ederek sınıfın genel durumu hakkında detaylı bir rapor hazırla.
+  prompt: `Sen LGS konusunda uzman bir eğitim danışmanısın. Sana verilen sınıf bilgilerini ve deneme sınavı sonuçları özetini analiz ederek sınıfın genel durumu hakkında detaylı ve bütüncül bir rapor hazırla.
 
-Rapor aşağıdaki gibi yapılandırılmalıdır:
-1.  **summary:** Sınıfın genel akademik performansını, deneme ortalamalarını ve genel potansiyelini değerlendiren bir paragraf yaz. Sana verilen özet metnini yorumlayarak başla.
-2.  **strengths:** Sınıfın bir bütün olarak başarılı olduğu, ortalamalarının yüksek olduğu dersleri veya konuları vurgulayan 2-3 maddelik bir liste oluştur.
-3.  **areasForImprovement:** Sınıfın genel olarak zorlandığı, net ortalamalarının düşük olduğu dersleri veya konuları tespit eden 2-3 maddelik bir liste oluştur. Özellikle LGS'de katsayısı yüksek olan derslerdeki (Matematik, Fen, Türkçe) genel duruma dikkat çek.
-4.  **roadmap:** Sınıfın kolektif performansını artırmak için 5-6 adımlık somut ve uygulanabilir bir yol haritası oluştur. Her adımın bir 'title' (başlık) ve 'description' (açıklama) alanı olmalıdır. Başlıklar kısa ve eyleme yönelik olmalı (örn: "Detaylı Konu ve Kazanım Analizi"). Açıklamalar ise bu adımı detaylandırmalıdır.
-5.  **recommendations:** Sınıfın genel gelişimi için 4-5 maddelik ek öneriler sun. Her önerinin bir 'title' (başlık) ve 'description' (açıklama) alanı olmalıdır (örn: "Ders ve Konu Bazlı Veri Toplama", "Hedef Belirleme Çalıştayı").
+Raporu, birkaç paragraflık akıcı bir metin olarak yaz. Analizinde şu noktalara değin:
+1.  **Giriş ve Genel Değerlendirme:** Sana verdiğim özet metnini yorumlayarak başla. Sınıfın genel akademik performansını, deneme ortalamalarını ve genel potansiyelini değerlendir.
+2.  **Güçlü Yönler ve Başarılar:** Sınıfın bir bütün olarak başarılı olduğu, ortalamalarının yüksek olduğu dersleri veya konuları vurgula.
+3.  **Geliştirilmesi Gereken Alanlar:** Sınıfın genel olarak zorlandığı, net ortalamalarının düşük olduğu dersleri veya konuları tespit et. Özellikle LGS'de katsayısı yüksek olan derslerdeki (Matematik, Fen, Türkçe) genel duruma dikkat çek.
+4.  **Sonuç ve Öneriler:** Sınıfın kolektif performansını artırmak için somut ve uygulanabilir önerilerde bulun. Bu, genel bir strateji veya birkaç önemli tavsiye olabilir.
 
-Tüm metinleri profesyonel, yapıcı ve yol gösterici bir dille yaz. Analizini, sınıfın kolektif başarısını artırmaya yönelik içgörüler sunacak şekilde odakla.
+Tüm metni profesyonel, yapıcı ve yol gösterici bir dille yaz. Analizini, sınıfın kolektif başarısını artırmaya yönelik içgörüler sunacak şekilde odakla. Raporun okunması kolay ve anlaşılır olmalı.
 
 Sınıf Bilgileri:
 - Sınıf Adı: {{{className}}}
@@ -155,7 +142,7 @@ Sınıf Bilgileri:
 Sınıf Özeti ve Ortalama Netler:
 {{{classSummary}}}
 
-Lütfen sadece 'summary', 'strengths', 'areasForImprovement', 'roadmap' ve 'recommendations' alanlarını doldurarak bir JSON çıktısı üret.`,
+Lütfen sadece 'analysis' alanını doldurarak bir JSON çıktısı üret.`,
 });
 
 const analyzeClassReportFlow = ai.defineFlow(

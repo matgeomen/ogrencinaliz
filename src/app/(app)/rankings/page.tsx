@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useMemo, useState } from 'react';
@@ -122,8 +123,8 @@ export default function RankingsPage() {
                         <TableCell>
                             <div className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">{student.rank}</div>
                         </TableCell>
-                        <TableCell className="font-medium">
-                            <div>{student.student_name}</div>
+                        <TableCell className="font-medium max-w-40">
+                            <div className="truncate" title={student.student_name}>{student.student_name}</div>
                             <div className="text-xs text-muted-foreground">{student.student_no}</div>
                         </TableCell>
                         <TableCell>{student.class}</TableCell>

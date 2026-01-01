@@ -12,8 +12,8 @@ import { StudentExamResult } from '@/types';
 import { FileText, Users, Home, Loader2, Printer, BrainCircuit, Lightbulb, TrendingDown, Route, CheckCircle, GraduationCap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { analyzeStudentReport, AnalyzeStudentReportOutput } from '@/ai/flows/analyze-student-report-flow';
+import { analyzeClassReport, AnalyzeClassReportOutput } from '@/ai/flows/analyze-class-report-flow';
 import { useToast } from '@/hooks/use-toast';
-import { Separator } from '@/components/ui/separator';
 
 const getStatus = (score: number): { label: string; variant: "default" | "secondary" | "destructive" | "outline" } => {
     if (score >= 400) return { label: 'Çok İyi', variant: 'default' };
@@ -275,9 +275,160 @@ function StudentReport() {
     );
 }
 
+function ClassReport() {
+    const { studentData, classes, exams } = useData();
+    const [selectedClass, setSelectedClass] = useState<string>('');
+    const [selectedExam, setSelectedExam] = useState<string>('');
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [aiAnalysis, setAiAnalysis] = useState<AnalyzeClassReportOutput | null>(null);
+    const { toast } = useToast();
+
+    const handleGenerate = async () => {
+        if (!selectedClass) {
+            toast({ title: "Lütfen bir sınıf seçin.", variant: 'destructive' });
+            return;
+        }
+        setIsGenerating(true);
+        setAiAnalysis(null);
+
+        const classData = studentData.filter(d => 
+            d.class === selectedClass && 
+            (selectedExam === '' || d.exam_name === selectedExam)
+        );
+
+        if (classData.length === 0) {
+            toast({ title: "Seçilen sınıf veya deneme için veri bulunamadı.", variant: 'destructive' });
+            setIsGenerating(false);
+            return;
+        }
+        
+        try {
+            const result = await analyzeClassReport({
+                className: selectedClass,
+                examName: selectedExam || 'Tüm Denemeler',
+                examResults: classData,
+            });
+            setAiAnalysis(result);
+            toast({ title: "Sınıf Raporu başarıyla oluşturuldu." });
+        } catch (error) {
+            console.error("AI Class Analysis Error:", error);
+            toast({ title: "Sınıf raporu oluşturulurken bir hata oluştu.", variant: 'destructive' });
+        } finally {
+            setIsGenerating(false);
+        }
+    }
+
+    const handleClassChange = (c: string) => {
+        setSelectedClass(c);
+        setAiAnalysis(null);
+    }
+     const handleExamChange = (e: string) => {
+        setSelectedExam(e);
+        setAiAnalysis(null);
+    }
+
+    return (
+         <div>
+            <Card>
+                <CardContent className="p-4 flex flex-col sm:flex-row gap-4">
+                    <Select value={selectedClass} onValueChange={handleClassChange}>
+                        <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Sınıf Seçin"/></SelectTrigger>
+                        <SelectContent>
+                            {classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    
+                    <Select value={selectedExam} onValueChange={handleExamChange}>
+                        <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Deneme (Opsiyonel)"/></SelectTrigger>
+                        <SelectContent>
+                             <SelectItem value=''>Tüm Denemeler</SelectItem>
+                            {exams.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    
+                    <Button onClick={handleGenerate} disabled={isGenerating || !selectedClass} className="w-full sm:w-auto">
+                        {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BrainCircuit className="mr-2 h-4 w-4" />}
+                        Rapor Oluştur
+                    </Button>
+                </CardContent>
+            </Card>
+
+            {isGenerating && (
+                <div className="mt-6 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                    <p>AI Sınıf Raporu oluşturuluyor...</p>
+                </div>
+            )}
+
+            {aiAnalysis && (
+                 <div className="mt-6 space-y-6 print-container">
+                     <Card>
+                        <CardHeader>
+                            <div className="flex justify-between items-center">
+                                <CardTitle>{selectedClass} Sınıfı - AI Raporu</CardTitle>
+                                <Button variant="outline" size="sm" onClick={() => window.print()}>
+                                    <Printer className="mr-2 h-4 w-4" />
+                                    Yazdır
+                                </Button>
+                            </div>
+                             <CardDescription>{selectedExam || "Tüm Denemeler"}</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <div className='p-4 bg-secondary/50 rounded-lg'>
+                                <h3 className='font-semibold flex items-center gap-2 mb-2'><BrainCircuit className='h-5 w-5 text-primary' /> Genel Değerlendirme</h3>
+                                <p className="text-sm text-muted-foreground">{aiAnalysis.summary}</p>
+                            </div>
+                            
+                            <div className="grid md:grid-cols-2 gap-6">
+                                <Card className="border-green-200 bg-green-50/50 dark:bg-green-900/20 dark:border-green-800">
+                                    <CardHeader>
+                                        <CardTitle className="text-base font-semibold flex items-center gap-2 text-green-800 dark:text-green-300">
+                                            <Lightbulb className="h-5 w-5"/>
+                                            Güçlü Yönler
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <ul className="space-y-2 text-sm text-green-900 dark:text-green-200">
+                                            {aiAnalysis.strengths.map((item, index) => (
+                                                <li key={index} className="flex items-start gap-2">
+                                                    <CheckCircle className="h-4 w-4 mt-0.5 text-green-600 shrink-0"/>
+                                                    <span>{item}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </CardContent>
+                                </Card>
+                                <Card className="border-orange-200 bg-orange-50/50 dark:bg-orange-900/20 dark:border-orange-800">
+                                    <CardHeader>
+                                        <CardTitle className="text-base font-semibold flex items-center gap-2 text-orange-800 dark:text-orange-300">
+                                            <TrendingDown className="h-5 w-5"/>
+                                            Geliştirilmesi Gerekenler
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <ul className="space-y-2 text-sm text-orange-900 dark:text-orange-200">
+                                            {aiAnalysis.areasForImprovement.map((item, index) => (
+                                                <li key={index} className="flex items-start gap-2">
+                                                    <TrendingDown className="h-4 w-4 mt-0.5 text-orange-600 shrink-0"/>
+                                                    <span>{item}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </CardContent>
+                    </Card>
+                 </div>
+            )}
+        </div>
+    );
+}
+
+
 function PlaceholderReport({ title, description }: { title: string, description: string}) {
     return (
-        <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm h-64">
+        <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm h-64 mt-6">
             <div className="flex flex-col items-center gap-1 text-center">
             <h3 className="text-2xl font-bold tracking-tight">
                 {title}
@@ -310,13 +461,13 @@ export default function ReportsPage() {
                 className={cn("cursor-pointer hover:shadow-lg transition-shadow", activeTab === type.id && "ring-2 ring-primary")}
                 onClick={() => setActiveTab(type.id)}
             >
-                <CardHeader className="flex flex-row items-center gap-4 space-y-0">
+                <CardHeader className="flex flex-row items-center gap-4 space-y-0 p-4">
                     <div className="bg-muted p-3 rounded-lg">
                         <type.icon className="h-6 w-6 text-primary" />
                     </div>
                     <div>
-                        <CardTitle>{type.title}</CardTitle>
-                        <CardDescription>{type.description}</CardDescription>
+                        <CardTitle className='text-base font-semibold'>{type.title}</CardTitle>
+                        <CardDescription className='text-xs'>{type.description}</CardDescription>
                     </div>
                 </CardHeader>
             </Card>
@@ -325,7 +476,7 @@ export default function ReportsPage() {
 
       <div className="mt-6">
           {activeTab === 'student' && <StudentReport />}
-          {activeTab === 'class' && <PlaceholderReport title="Sınıf Raporu" description="Bu özellik yakında aktif olacaktır." />}
+          {activeTab === 'class' && <ClassReport />}
           {activeTab === 'parent' && <PlaceholderReport title="Veli Raporu" description="Bu özellik yakında aktif olacaktır." />}
       </div>
     </div>

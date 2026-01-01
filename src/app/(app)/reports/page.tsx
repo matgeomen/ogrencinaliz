@@ -278,7 +278,7 @@ function StudentReport() {
 function ClassReport() {
     const { studentData, classes, exams } = useData();
     const [selectedClass, setSelectedClass] = useState<string>('');
-    const [selectedExam, setSelectedExam] = useState<string>('');
+    const [selectedExam, setSelectedExam] = useState<string>('all');
     const [isGenerating, setIsGenerating] = useState(false);
     const [aiAnalysis, setAiAnalysis] = useState<AnalyzeClassReportOutput | null>(null);
     const { toast } = useToast();
@@ -293,7 +293,7 @@ function ClassReport() {
 
         const classData = studentData.filter(d => 
             d.class === selectedClass && 
-            (selectedExam === '' || d.exam_name === selectedExam)
+            (selectedExam === 'all' || d.exam_name === selectedExam)
         );
 
         if (classData.length === 0) {
@@ -305,7 +305,7 @@ function ClassReport() {
         try {
             const result = await analyzeClassReport({
                 className: selectedClass,
-                examName: selectedExam || 'Tüm Denemeler',
+                examName: selectedExam === 'all' ? 'Tüm Denemeler' : selectedExam,
                 examResults: classData,
             });
             setAiAnalysis(result);
@@ -341,7 +341,7 @@ function ClassReport() {
                     <Select value={selectedExam} onValueChange={handleExamChange}>
                         <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Deneme (Opsiyonel)"/></SelectTrigger>
                         <SelectContent>
-                             <SelectItem value=''>Tüm Denemeler</SelectItem>
+                             <SelectItem value='all'>Tüm Denemeler</SelectItem>
                             {exams.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
                         </SelectContent>
                     </Select>
@@ -371,7 +371,7 @@ function ClassReport() {
                                     Yazdır
                                 </Button>
                             </div>
-                             <CardDescription>{selectedExam || "Tüm Denemeler"}</CardDescription>
+                             <CardDescription>{selectedExam === 'all' ? "Tüm Denemeler" : selectedExam}</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
                             <div className='p-4 bg-secondary/50 rounded-lg'>

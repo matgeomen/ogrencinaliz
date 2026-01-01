@@ -56,7 +56,8 @@ export default function AiAnalysisPage() {
     setAnalysisResult(null);
     setSelectedExams(prev => {
         if (exam === 'all') {
-            return prev.length === exams.length ? [] : exams;
+            const allExamNames = exams.map(e => e);
+            return prev.length === allExamNames.length ? [] : allExamNames;
         }
         return prev.includes(exam) 
             ? prev.filter(e => e !== exam)
@@ -65,12 +66,14 @@ export default function AiAnalysisPage() {
   }
 
   const selectedStudentName = useMemo(() => {
-    return studentsInClass.find(s => s.student_no.toString() === selectedStudentNo)?.student_name;
+    const student = studentsInClass.find(s => s.student_no.toString() === selectedStudentNo);
+    if (!student) return '';
+    return `${student.student_name} (${student.student_no})`
   }, [studentsInClass, selectedStudentNo]);
 
   const examNameForTitle = useMemo(() => {
     if (selectedExams.length === 0) return "Deneme Seçilmedi";
-    if (selectedExams.includes('all') || selectedExams.length === exams.length) return 'Tüm Denemeler';
+    if (selectedExams.length === exams.length) return 'Tüm Denemeler';
     return selectedExams.join(', ');
   }, [selectedExams, exams]);
 
@@ -88,12 +91,12 @@ export default function AiAnalysisPage() {
       let result: AnalysisResult;
       if (analysisType === 'student') {
         const studentResults = studentData
-          .filter(s => s.student_no.toString() === selectedStudentNo && (selectedExams.includes('all') || selectedExams.includes(s.exam_name)));
+          .filter(s => s.student_no.toString() === selectedStudentNo && (selectedExams.includes(s.exam_name)));
         
         if (studentResults.length === 0) throw new Error("Öğrenci için seçili denemelerde sonuç bulunamadı.");
 
         result = await analyzeStudentReport({
-            studentName: selectedStudentName || 'Bilinmeyen Öğrenci',
+            studentName: studentsInClass.find(s => s.student_no.toString() === selectedStudentNo)?.student_name || 'Bilinmeyen Öğrenci',
             className: selectedClass,
             examName: examNameForTitle,
             examResults: studentResults,
@@ -101,7 +104,7 @@ export default function AiAnalysisPage() {
       } else { // Class analysis
         const classResults = studentData.filter(d => 
             d.class === selectedClass && 
-            (selectedExams.includes('all') || selectedExams.includes(d.exam_name))
+            (selectedExams.includes(d.exam_name))
         );
         if (classResults.length === 0) throw new Error("Sınıf için seçili denemelerde sonuç bulunamadı.");
         
@@ -156,8 +159,8 @@ export default function AiAnalysisPage() {
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                        {analysisType === 'student' ? <User /> : <Users />}
-                        {analysisType === 'student' ? `${selectedStudentName} - AI Değerlendirme` : `${selectedClass} Sınıfı - AI Değerlendirme`}
+                        <BrainCircuit className="h-6 w-6 text-primary" />
+                        {analysisType === 'student' ? `${selectedStudentName} - AI Değerlendirmesi` : `${selectedClass} Sınıfı - AI Değerlendirmesi`}
                     </CardTitle>
                     <CardDescription>{examNameForTitle}</CardDescription>
                 </CardHeader>
@@ -223,7 +226,7 @@ export default function AiAnalysisPage() {
     <div className="space-y-6">
       <PageHeader title="AI Analiz" description="Yapay zeka destekli öğrenci ve sınıf değerlendirmesi" />
       <Card>
-        <CardContent className="p-4 flex flex-col sm:flex-row items-center gap-4">
+        <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-end gap-4">
             <div className="w-full sm:w-auto flex-1">
                 <Label>Analiz Türü</Label>
                 <Select value={analysisType} onValueChange={handleAnalysisTypeChange}>
@@ -249,7 +252,7 @@ export default function AiAnalysisPage() {
                     <Select value={selectedStudentNo} onValueChange={handleStudentChange} disabled={!selectedClass}>
                         <SelectTrigger><SelectValue placeholder="Öğrenci Seçin"/></SelectTrigger>
                         <SelectContent>
-                            {studentsInClass.map(s => <SelectItem key={s.student_no} value={s.student_no.toString()}>{s.student_name}</SelectItem>)}
+                            {studentsInClass.map(s => <SelectItem key={s.student_no} value={s.student_no.toString()}>{s.student_name} ({s.student_no})</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>
@@ -266,6 +269,7 @@ export default function AiAnalysisPage() {
                         <DropdownMenuLabel>Deneme Sınavları</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuCheckboxItem checked={selectedExams.length === exams.length} onCheckedChange={() => handleExamChange('all')}>Tüm Denemeler</DropdownMenuCheckboxItem>
+                        <DropdownMenuSeparator />
                         {exams.map(e => (
                             <DropdownMenuCheckboxItem key={e} checked={selectedExams.includes(e)} onCheckedChange={() => handleExamChange(e)}>{e}</DropdownMenuCheckboxItem>
                         ))}
@@ -273,7 +277,7 @@ export default function AiAnalysisPage() {
                 </DropdownMenu>
             </div>
 
-            <Button onClick={handleGenerate} disabled={isGenerating || !selectedClass} className="w-full sm:w-auto self-end">
+            <Button onClick={handleGenerate} disabled={isGenerating || !selectedClass} className="w-full sm:w-auto">
                 {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BrainCircuit className="mr-2 h-4 w-4" />}
                 Analiz Oluştur
             </Button>

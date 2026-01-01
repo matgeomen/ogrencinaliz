@@ -101,19 +101,14 @@ body {
   }
   .print-container {
     display: block !important;
-    page-break-before: auto;
+    margin: 0 !important;
+    padding: 0 !important;
+    space-y-6: 0;
+  }
+  .print-card {
+    box-shadow: none !important;
+    border: none !important;
+    break-inside: avoid;
     page-break-inside: avoid;
-  }
-   .report-section {
-    display: block !important;
-  }
-  .space-y-6, .space-y-4, .grid {
-    margin-top: 0 !important;
-    gap: 1rem !important;
-  }
-  .card {
-     box-shadow: none;
-     border: 1px solid hsl(var(--border));
-     page-break-inside: avoid;
   }
 }

@@ -31,50 +31,47 @@ const handleDownloadPdf = async (reportId: string, fileName: string) => {
         return;
     }
 
-    try {
-        const canvas = await html2canvas(reportElement, {
-            scale: 2, // Daha iyi çözünürlük için
-            useCORS: true,
-            logging: false,
-            windowWidth: reportElement.scrollWidth,
-            windowHeight: reportElement.scrollHeight
-        });
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+    const margin = 15;
+    const contentWidth = pdfWidth - margin * 2;
+    let currentY = margin;
 
-        const imgData = canvas.toDataURL('image/png');
-        const imgWidth = canvas.width;
-        const imgHeight = canvas.height;
-        
-        // A4 boyutu (mm) ve kenar boşlukları
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-        const margin = 15;
-        const contentWidth = pdfWidth - margin * 2;
-        
-        // Görüntü oranını koruyarak yüksekliği hesapla
-        const ratio = imgWidth / imgHeight;
-        const contentHeight = contentWidth / ratio;
+    // Get all top-level cards within the report element
+    const cards = Array.from(reportElement.querySelectorAll<HTMLElement>(':scope > .print-card'));
 
-        let heightLeft = contentHeight;
-        let position = 0;
+    for (const card of cards) {
+        try {
+            const canvas = await html2canvas(card, {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                windowWidth: card.scrollWidth,
+                windowHeight: card.scrollHeight,
+            });
 
-        // İlk sayfayı ekle
-        pdf.addImage(imgData, 'PNG', margin, margin, contentWidth, contentHeight);
-        heightLeft -= (pdfHeight - margin * 2);
+            const imgData = canvas.toDataURL('image/png');
+            const imgWidth = canvas.width;
+            const imgHeight = canvas.height;
+            const ratio = imgWidth / imgHeight;
+            const contentHeight = contentWidth / ratio;
+            
+            // Check if the content fits on the current page
+            if (currentY + contentHeight > pdfHeight - margin) {
+                pdf.addPage();
+                currentY = margin; // Reset Y for the new page
+            }
+            
+            pdf.addImage(imgData, 'PNG', margin, currentY, contentWidth, contentHeight);
+            currentY += contentHeight + 10; // Add some spacing between cards
 
-        // İçerik sayfaya sığmadıysa yeni sayfalar ekle
-        while (heightLeft > 0) {
-            position = position - (pdfHeight - margin*2); // Sonraki sayfanın başlangıç pozisyonu
-            pdf.addPage();
-            // Aynı resmi, dikeyde kaydırarak yeni sayfaya ekle
-            pdf.addImage(imgData, 'PNG', margin, position + margin, contentWidth, contentHeight);
-            heightLeft -= (pdfHeight - margin*2);
+        } catch(error) {
+            console.error("PDF için kart işlenirken hata oluştu:", error);
         }
-        
-        pdf.save(`${fileName}.pdf`);
-    } catch (error) {
-        console.error("PDF oluşturulurken bir hata oluştu:", error);
     }
+    
+    pdf.save(`${fileName}.pdf`);
 };
 
 
@@ -176,10 +173,10 @@ function StudentReport() {
                 </div>
             )}
             
-            <div id="student-report-content">
+            <div id="student-report-content" className="print-container mt-6 space-y-6">
                 {aiAnalysis && (
-                    <div className="mt-6 space-y-6 print-container">
-                        <Card>
+                    <>
+                        <Card className="print-card">
                             <CardHeader>
                                 <div className="flex justify-between items-center">
                                     <CardTitle>{selectedStudentName} - AI Değerlendirme Raporu</CardTitle>
@@ -234,7 +231,7 @@ function StudentReport() {
                         </Card>
 
                         {aiAnalysis.roadmap && aiAnalysis.roadmap.length > 0 && (
-                            <Card>
+                            <Card className="print-card">
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2">
                                         <Route className="h-5 w-5 text-primary"/>
@@ -258,7 +255,7 @@ function StudentReport() {
                         )}
 
                         {aiAnalysis.recommendations && aiAnalysis.recommendations.length > 0 && (
-                            <Card>
+                            <Card className="print-card">
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2">
                                         <GraduationCap className="h-5 w-5 text-primary"/>
@@ -280,7 +277,7 @@ function StudentReport() {
                                 </CardContent>
                             </Card>
                         )}
-                    </div>
+                    </>
                 )}
             </div>
 
@@ -395,6 +392,7 @@ function ClassReport() {
     }
 
     const onDownload = async () => {
+        if (!selectedClass) return;
         setIsDownloading(true);
         const examName = selectedExam === 'all' ? 'tum-denemeler' : selectedExam.replace(/\s+/g, '-').toLowerCase();
         await handleDownloadPdf('class-report-content', `${selectedClass}-sinifi-${examName}-rapor`);
@@ -433,10 +431,10 @@ function ClassReport() {
                     <p>AI Sınıf Raporu oluşturuluyor...</p>
                 </div>
             )}
-            <div id="class-report-content">
+            <div id="class-report-content" className="print-container mt-6 space-y-6">
                 {aiAnalysis && (
-                    <div className="mt-6 space-y-6 print-container">
-                        <Card>
+                    <>
+                        <Card className="print-card">
                             <CardHeader>
                                 <div className="flex justify-between items-center">
                                     <CardTitle>{selectedClass} Sınıfı - AI Raporu</CardTitle>
@@ -495,7 +493,7 @@ function ClassReport() {
                         </Card>
 
                         {aiAnalysis.roadmap && aiAnalysis.roadmap.length > 0 && (
-                            <Card>
+                            <Card className="print-card">
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2">
                                         <Route className="h-5 w-5 text-primary"/>
@@ -518,7 +516,7 @@ function ClassReport() {
                             </Card>
                         )}
                         {aiAnalysis.recommendations && aiAnalysis.recommendations.length > 0 && (
-                            <Card>
+                            <Card className="print-card">
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2">
                                         <GraduationCap className="h-5 w-5 text-primary"/>
@@ -540,7 +538,7 @@ function ClassReport() {
                                 </CardContent>
                             </Card>
                         )}
-                    </div>
+                    </>
                 )}
             </div>
         </div>

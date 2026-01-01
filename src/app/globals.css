@@ -86,3 +86,34 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+@media print {
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  main {
+    padding: 0;
+    margin: 0;
+  }
+  .no-print, [data-sidebar], header {
+    display: none !important;
+  }
+  .print-container {
+    display: block !important;
+    page-break-before: auto;
+    page-break-inside: avoid;
+  }
+   .report-section {
+    display: block !important;
+  }
+  .space-y-6, .space-y-4, .grid {
+    margin-top: 0 !important;
+    gap: 1rem !important;
+  }
+  .card {
+     box-shadow: none;
+     border: 1px solid hsl(var(--border));
+     page-break-inside: avoid;
+  }
+}

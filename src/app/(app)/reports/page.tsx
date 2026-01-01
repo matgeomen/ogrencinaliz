@@ -81,8 +81,8 @@ function StudentReport() {
     }
 
     return (
-        <div>
-            <Card>
+        <div className="report-section">
+            <Card className="no-print">
                 <CardContent className="p-4 flex flex-col sm:flex-row gap-4">
                     <Select value={selectedClass} onValueChange={handleClassChange}>
                         <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Sınıf Seçin"/></SelectTrigger>
@@ -118,7 +118,7 @@ function StudentReport() {
                         <CardHeader>
                             <div className="flex justify-between items-center">
                                 <CardTitle>{selectedStudentName} - AI Değerlendirme Raporu</CardTitle>
-                                <Button variant="outline" size="sm" onClick={() => window.print()}>
+                                <Button variant="outline" size="sm" onClick={() => window.print()} className="no-print">
                                     <Printer className="mr-2 h-4 w-4" />
                                     Yazdır
                                 </Button>
@@ -328,8 +328,8 @@ function ClassReport() {
     }
 
     return (
-         <div>
-            <Card>
+         <div className="report-section">
+            <Card className="no-print">
                 <CardContent className="p-4 flex flex-col sm:flex-row gap-4">
                     <Select value={selectedClass} onValueChange={handleClassChange}>
                         <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Sınıf Seçin"/></SelectTrigger>
@@ -366,7 +366,7 @@ function ClassReport() {
                         <CardHeader>
                             <div className="flex justify-between items-center">
                                 <CardTitle>{selectedClass} Sınıfı - AI Raporu</CardTitle>
-                                <Button variant="outline" size="sm" onClick={() => window.print()}>
+                                <Button variant="outline" size="sm" onClick={() => window.print()} className="no-print">
                                     <Printer className="mr-2 h-4 w-4" />
                                     Yazdır
                                 </Button>
@@ -499,9 +499,9 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Raporlar" description="AI destekli öğrenci ve sınıf raporları" />
+      <PageHeader title="Raporlar" description="AI destekli öğrenci ve sınıf raporları" className="no-print" />
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-3 no-print">
         {reportTypes.map(type => (
             <Card 
                 key={type.id} 

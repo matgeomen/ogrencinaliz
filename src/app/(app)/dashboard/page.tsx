@@ -4,14 +4,14 @@ import { useData } from '@/contexts/data-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageHeader } from '@/components/page-header';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Users, Target, CheckCircle, Award } from 'lucide-react';
+import { Users, Target, CheckCircle, Award, FileText } from 'lucide-react';
 import { useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const COLORS = ['#4CAF50', '#FFC107', '#F44336', '#2196F3'];
 
 export default function DashboardPage() {
-  const { studentData, selectedExam, loading } = useData();
+  const { studentData, selectedExam, exams, loading } = useData();
 
   const examData = useMemo(() => {
     return studentData.filter(d => d.exam_name === selectedExam);
@@ -19,7 +19,7 @@ export default function DashboardPage() {
 
   const stats = useMemo(() => {
     if (examData.length === 0) {
-      return { studentCount: 0, avgNet: 0, avgScore: 0, successRate: 0 };
+      return { studentCount: 0, examCount: exams.length, avgNet: 0, successRate: 0 };
     }
     const totalStudents = examData.length;
     const totalNet = examData.reduce((sum, d) => sum + d.toplam_net, 0);
@@ -30,11 +30,11 @@ export default function DashboardPage() {
 
     return {
       studentCount: totalStudents,
+      examCount: exams.length,
       avgNet: avgNet.toFixed(2),
-      avgScore: avgScore.toFixed(2),
       successRate: successRate.toFixed(2),
     };
-  }, [examData]);
+  }, [examData, exams.length]);
 
   const lessonAverages = useMemo(() => {
      if (examData.length === 0) return [];
@@ -51,22 +51,23 @@ export default function DashboardPage() {
   const scoreDistribution = useMemo(() => {
     if (examData.length === 0) return [];
     const ranges = [
-      { name: '400-500 Puan', min: 400, max: 500, count: 0 },
-      { name: '300-399 Puan', min: 300, max: 399.99, count: 0 },
-      { name: '200-299 Puan', min: 200, max: 299.99, count: 0 },
-      { name: '< 200 Puan', min: 0, max: 199.99, count: 0 },
+      { name: '400-500', min: 400, max: 500.01, count: 0, color: '#3b82f6' },
+      { name: '300-400', min: 300, max: 400, count: 0, color: '#16a34a' },
+      { name: '200-300', min: 200, max: 300, count: 0, color: '#f97316' },
+      { name: '100-200', min: 100, max: 200, count: 0, color: '#ef4444' },
+      { name: '0-100', min: 0, max: 100, count: 0, color: '#dc2626' },
     ];
     examData.forEach(student => {
-      const range = ranges.find(r => student.toplam_puan >= r.min && student.toplam_puan <= r.max);
+      const range = ranges.find(r => student.toplam_puan >= r.min && student.toplam_puan < r.max);
       if (range) range.count++;
     });
-    return ranges.filter(r => r.count > 0).map(r => ({ name: r.name, value: r.count }));
+    return ranges.filter(r => r.count > 0).map(r => ({ name: r.name, value: r.count, color: r.color }));
   }, [examData]);
   
   if (loading) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Ana Sayfa" description="Sisteme genel bakış." />
+        <PageHeader title="Kontrol Merkezi" description="Sisteme genel bakış." />
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-32" />)}
         </div>
@@ -80,7 +81,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Ana Sayfa" description={`"${selectedExam}" denemesi için genel bakış.`} />
+      <PageHeader title="Kontrol Merkezi" description={`"${selectedExam}" sonuçları`} />
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -90,7 +91,15 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.studentCount}</div>
-            <p className="text-xs text-muted-foreground">Sınava katılan öğrenci sayısı</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Toplam Deneme</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.examCount}</div>
           </CardContent>
         </Card>
         <Card>
@@ -100,27 +109,15 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.avgNet}</div>
-            <p className="text-xs text-muted-foreground">90 soru üzerinden</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ortalama Puan</CardTitle>
-            <Award className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.avgScore}</div>
-            <p className="text-xs text-muted-foreground">500 tam puan üzerinden</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Genel Başarı</CardTitle>
+            <CardTitle className="text-sm font-medium">Başarı Oranı</CardTitle>
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">%{stats.successRate}</div>
-            <p className="text-xs text-muted-foreground">Puan bazlı başarı oranı</p>
           </CardContent>
         </Card>
       </div>
@@ -128,7 +125,7 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Derslere Göre Ortalama Netler</CardTitle>
+            <CardTitle>Ders Bazlı Performans</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -137,7 +134,6 @@ export default function DashboardPage() {
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip />
-                <Legend />
                 <Bar dataKey="Ortalama Net" fill="hsl(var(--primary))" />
               </BarChart>
             </ResponsiveContainer>
@@ -145,23 +141,24 @@ export default function DashboardPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Puan Aralığı Dağılımı</CardTitle>
+            <CardTitle>Puan Dağılımı</CardTitle>
           </CardHeader>
           <CardContent>
              <ResponsiveContainer width="100%" height={300}>
                <PieChart>
-                 <Pie
-                   data={scoreDistribution}
-                   cx="50%"
-                   cy="50%"
-                   labelLine={false}
-                   label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                   outerRadius={80}
-                   fill="#8884d8"
-                   dataKey="value"
-                 >
+                  <Pie
+                    data={scoreDistribution}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={100}
+                    innerRadius={60}
+                    fill="#8884d8"
+                    dataKey="value"
+                    nameKey="name"
+                  >
                    {scoreDistribution.map((entry, index) => (
-                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                     <Cell key={`cell-${index}`} fill={entry.color} />
                    ))}
                  </Pie>
                  <Tooltip />

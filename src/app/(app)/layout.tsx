@@ -38,27 +38,28 @@ import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import {
-  LayoutDashboard,
+  LayoutGrid,
   Users,
   FileText,
   BarChart3,
   Trophy,
   FileBox,
   Upload,
-  GitCompareArrows,
-  Settings
+  GraduationCap,
+  BrainCircuit,
+  Database
 } from 'lucide-react';
 
 const navItems = [
-  { href: '/dashboard', label: 'Ana Sayfa', icon: LayoutDashboard },
+  { href: '/dashboard', label: 'Kontrol Merkezi', icon: LayoutGrid },
   { href: '/students', label: 'Öğrenciler', icon: Users },
   { href: '/exams', label: 'Denemeler', icon: FileText },
   { href: '/analytics', label: 'Analizler', icon: BarChart3 },
   { href: '/rankings', label: 'Sıralamalar', icon: Trophy },
   { href: '/reports', label: 'Raporlar', icon: FileBox },
-  { href: '/compare', label: 'Karşılaştır', icon: GitCompareArrows },
-  { href: '/upload', label: 'Yükleme', icon: Upload },
-  { href: '/settings', label: 'Ayarlar', icon: Settings },
+  { href: '/e-okul', label: 'E-Okul Verileri', icon: Database },
+  { href: '/ai-analysis', label: 'AI Analiz', icon: BrainCircuit },
+  { href: '/upload', label: 'Veri Yükleme', icon: Upload },
 ];
 
 function AppHeader() {
@@ -69,7 +70,7 @@ function AppHeader() {
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
       <div className="flex-1">
         <h1 className="text-lg font-semibold md:hidden">
-          Öğrenci Takip
+          LGS Takip
         </h1>
       </div>
       <div className="flex flex-1 items-center justify-end gap-4">
@@ -131,8 +132,8 @@ function AppSidebar() {
       <SidebarHeader>
         <Button variant="ghost" asChild className="h-auto justify-start gap-2 px-2 text-base">
           <Link href="/dashboard">
-            <Icons.logo className="size-6 shrink-0" />
-            <span className="font-headline text-lg font-semibold">Öğrenci Takip</span>
+            <GraduationCap className="size-6 shrink-0" />
+            <span className="font-headline text-lg font-semibold">LGS Takip</span>
           </Link>
         </Button>
       </SidebarHeader>
@@ -155,7 +156,9 @@ function AppSidebar() {
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter>
-         {/* Can add footer items here if needed */}
+         <div className="p-2 text-center text-xs text-muted-foreground">
+          LGS Öğrenci Takip Sistemi v1.0
+         </div>
       </SidebarFooter>
     </Sidebar>
   );

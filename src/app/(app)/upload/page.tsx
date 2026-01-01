@@ -14,8 +14,8 @@ import { analyzeEokulData } from '@/ai/flows/analyze-eokul-data';
 import { Textarea } from '@/components/ui/textarea';
 
 // Dynamically import pdfjs-dist to avoid SSR issues
-const pdfjs = import('pdfjs-dist/build/pdf');
-const pdfjsWorker = import('pdfjs-dist/build/pdf.worker.entry');
+const pdfjsPromise = import('pdfjs-dist/build/pdf');
+import('pdfjs-dist/build/pdf.worker.entry');
 
 
 export default function UploadPage() {
@@ -106,7 +106,8 @@ export default function UploadPage() {
 
   const processPdf = async (file: File) => {
       try {
-        const pdf = await (await pdfjs).getDocument(URL.createObjectURL(file)).promise;
+        const pdfjs = await pdfjsPromise;
+        const pdf = await pdfjs.getDocument(URL.createObjectURL(file)).promise;
         let textContent = '';
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);

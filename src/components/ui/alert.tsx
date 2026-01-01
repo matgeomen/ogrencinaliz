@@ -47,12 +47,14 @@ AlertTitle.displayName = "AlertTitle"
 const AlertDescription = React.forwardRef<
   HTMLParagraphElement,
   React.HTMLAttributes<HTMLParagraphElement>
->(({ className, ...props }, ref) => (
+>(({ className, children, ...props }, ref) => (
   <div
     ref={ref}
     className={cn("text-sm [&_p]:leading-relaxed", className)}
     {...props}
-  />
+  >
+      {children}
+  </div>
 ))
 AlertDescription.displayName = "AlertDescription"
 

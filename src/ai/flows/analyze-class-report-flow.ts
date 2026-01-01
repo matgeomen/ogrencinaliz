@@ -1,8 +1,8 @@
 'use server';
 /**
- * @fileOverview Sınıf deneme sınavı sonuçlarını analiz eden bir AI akışı.
+ * @fileOverview Sınıf deneme sınavı sonuçlarını analiz ederek genel öneriler sunan bir AI akışı.
  *
- * - analyzeClassReport - Sınıf verilerini analiz eden fonksiyon.
+ * - analyzeClassReport - Sınıf verilerini analiz edip öneriler üreten fonksiyon.
  * - AnalyzeClassReportInput - analyzeClassReport fonksiyonu için giriş tipi.
  * - AnalyzeClassReportOutput - analyzeClassReport fonksiyonu için dönüş tipi.
  */
@@ -38,8 +38,10 @@ const AnalyzeClassReportInputSchema = z.object({
 export type AnalyzeClassReportInput = z.infer<typeof AnalyzeClassReportInputSchema>;
 
 const AnalyzeClassReportOutputSchema = z.object({
-  strengths: z.array(z.string()).describe("Sınıfın bir bütün olarak başarılı olduğu, ortalamalarının yüksek olduğu dersleri veya konuları vurgulayan 3-4 madde. Her madde **Başlık:** Açıklama formatında olmalıdır."),
-  areasForImprovement: z.array(z.string()).describe("Sınıfın genel olarak zorlandığı, net ortalamalarının düşük olduğu dersleri veya konuları tespit eden 3-4 madde. Her madde **Başlık:** Açıklama formatında olmalıdır."),
+  recommendations: z.array(z.object({
+    title: z.string().describe("Önerinin başlığı, kalın formatta."),
+    description: z.string().describe("Önerinin detaylı açıklaması.")
+  })).describe("Sınıfın genel başarısını artırmak için 7-8 maddelik somut, uygulanabilir pedagojik öneri listesi.")
 });
 export type AnalyzeClassReportOutput = z.infer<
   typeof AnalyzeClassReportOutputSchema
@@ -126,14 +128,19 @@ const prompt = ai.definePrompt({
   name: 'analyzeClassReportPrompt',
   input: {schema: PromptInputSchema},
   output: {schema: AnalyzeClassReportOutputSchema},
-  prompt: `Sen LGS konusunda uzman bir eğitim danışmanısın. Sana verilen sınıf bilgilerini ve deneme sınavı sonuçları özetini analiz ederek sınıfın genel durumu hakkında detaylı ve bütüncül bir rapor hazırla.
+  prompt: `Sen LGS konusunda uzman bir eğitim danışmanısın. Sana verilen sınıf bilgilerini ve deneme sınavı sonuçları özetini analiz ederek, o sınıfın genel akademik başarısını artırmak için somut ve uygulanabilir pedagojik önerilerde bulun.
 
-Raporu iki ana başlık altında topla: "Güçlü Yönler" ve "Geliştirilmesi Gereken Alanlar". Her başlık için 3-4 maddelik listeler oluştur.
+Yaklaşık 7-8 maddelik bir öneri listesi oluştur. Her önerinin bir 'title' (başlık) ve 'description' (açıklama) alanı olmalıdır. Başlıklar eyleme yönelik ve dikkat çekici olmalı.
 
-- **strengths (Güçlü Yönler):** Sınıfın bir bütün olarak başarılı olduğu, ortalamalarının yüksek olduğu dersleri, genel potansiyelini veya gözlemlediğin olumlu eğilimleri vurgula.
-- **areasForImprovement (Geliştirilmesi Gereken Alanlar):** Sınıfın genel olarak zorlandığı, net ortalamalarının düşük olduğu dersleri veya LGS başarısı için kritik olan ama eksik görünen becerileri (örn: LGS tipi soru çözme, zaman yönetimi) tespit et.
-
-Her maddeyi "**Kalın Başlık:** Açıklama metni." formatında yaz.
+Önerilerin aşağıdaki gibi konuları kapsayabilir:
+- Bireysel çalışma planları ve kişiselleştirilmiş öğrenme.
+- Yanlış analizi teknikleri ve hatalardan öğrenme.
+- Okuma anlama ve yorumlama becerilerini geliştirme.
+- Aktif katılımı ve soru sorma kültürünü teşvik etme.
+- Öğretmenler arası iş birliği ve koordinasyon.
+- Veli-öğretmen iş birliğinin güçlendirilmesi.
+- Dijital kaynakların ve eğitim teknolojilerinin etkin kullanımı.
+- Motivasyon ve sınav kaygısıyla başa çıkma stratejileri.
 
 Tüm metni profesyonel, yapıcı ve yol gösterici bir dille yaz. Analizini, sınıfın kolektif başarısını artırmaya yönelik içgörüler sunacak şekilde odakla.
 
@@ -144,7 +151,7 @@ Sınıf Bilgileri:
 Sınıf Özeti ve Ortalama Netler:
 {{{classSummary}}}
 
-Lütfen sadece 'strengths' ve 'areasForImprovement' alanlarını doldurarak bir JSON çıktısı üret.`,
+Lütfen sadece 'recommendations' alanını doldurarak bir JSON çıktısı üret.`,
 });
 
 const analyzeClassReportFlow = ai.defineFlow(

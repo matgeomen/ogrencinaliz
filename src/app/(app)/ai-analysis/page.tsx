@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, BrainCircuit, Lightbulb, TrendingDown, Route, CheckCircle, GraduationCap, Users, User, ChevronDown } from 'lucide-react';
+import { Loader2, BrainCircuit, Lightbulb, TrendingDown, Route, CheckCircle, GraduationCap, Users, User, ChevronDown, TrendingUp, AlertTriangle } from 'lucide-react';
 import { analyzeStudentReport, AnalyzeStudentReportOutput } from '@/ai/flows/analyze-student-report-flow';
 import { analyzeClassReport, AnalyzeClassReportOutput } from '@/ai/flows/analyze-class-report-flow';
 import { Label } from '@/components/ui/label';
@@ -68,7 +68,7 @@ export default function AiAnalysisPage() {
   const selectedStudentName = useMemo(() => {
     const student = studentsInClass.find(s => s.student_no.toString() === selectedStudentNo);
     if (!student) return '';
-    return `${student.student_name} (${student.student_no})`
+    return `${student.student_name}`
   }, [studentsInClass, selectedStudentNo]);
 
   const examNameForTitle = useMemo(() => {
@@ -159,7 +159,6 @@ export default function AiAnalysisPage() {
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                        <BrainCircuit className="h-6 w-6 text-primary" />
                         {analysisType === 'student' ? `${selectedStudentName} - AI Değerlendirmesi` : `${selectedClass} Sınıfı - AI Değerlendirmesi`}
                     </CardTitle>
                     <CardDescription>{examNameForTitle}</CardDescription>
@@ -168,18 +167,18 @@ export default function AiAnalysisPage() {
                     <p className="text-sm text-muted-foreground p-4 bg-secondary/50 rounded-lg">{summary}</p>
                     <div className="grid md:grid-cols-2 gap-6">
                         <Card className="border-green-200 bg-green-50/50 dark:bg-green-900/20 dark:border-green-800">
-                            <CardHeader><CardTitle className="text-base font-semibold flex items-center gap-2 text-green-800 dark:text-green-300"><Lightbulb className="h-5 w-5"/>Güçlü Yönler</CardTitle></CardHeader>
+                            <CardHeader><CardTitle className="text-base font-semibold flex items-center gap-2 text-green-800 dark:text-green-300"><TrendingUp className="h-5 w-5"/>Güçlü Yönler</CardTitle></CardHeader>
                             <CardContent>
-                                <ul className="space-y-2 text-sm text-green-900 dark:text-green-200">
-                                    {strengths.map((item:string, index:number) => <li key={index} className="flex items-start gap-2"><CheckCircle className="h-4 w-4 mt-0.5 text-green-600 shrink-0"/><span>{item}</span></li>)}
+                                <ul className="space-y-2 text-sm list-disc pl-5 text-green-900 dark:text-green-200">
+                                    {strengths.map((item:string, index:number) => <li key={index} className="pl-2"><span>{item}</span></li>)}
                                 </ul>
                             </CardContent>
                         </Card>
                         <Card className="border-orange-200 bg-orange-50/50 dark:bg-orange-900/20 dark:border-orange-800">
-                            <CardHeader><CardTitle className="text-base font-semibold flex items-center gap-2 text-orange-800 dark:text-orange-300"><TrendingDown className="h-5 w-5"/>Geliştirilmesi Gerekenler</CardTitle></CardHeader>
+                            <CardHeader><CardTitle className="text-base font-semibold flex items-center gap-2 text-orange-800 dark:text-orange-300"><AlertTriangle className="h-5 w-5"/>Geliştirilmesi Gerekenler</CardTitle></CardHeader>
                             <CardContent>
-                                <ul className="space-y-2 text-sm text-orange-900 dark:text-orange-200">
-                                    {areasForImprovement.map((item:string, index:number) => <li key={index} className="flex items-start gap-2"><TrendingDown className="h-4 w-4 mt-0.5 text-orange-600 shrink-0"/><span>{item}</span></li>)}
+                                <ul className="space-y-2 text-sm list-disc pl-5 text-orange-900 dark:text-orange-200">
+                                    {areasForImprovement.map((item:string, index:number) => <li key={index} className="pl-2"><span>{item}</span></li>)}
                                 </ul>
                             </CardContent>
                         </Card>
@@ -252,7 +251,7 @@ export default function AiAnalysisPage() {
                     <Select value={selectedStudentNo} onValueChange={handleStudentChange} disabled={!selectedClass}>
                         <SelectTrigger><SelectValue placeholder="Öğrenci Seçin"/></SelectTrigger>
                         <SelectContent>
-                            {studentsInClass.map(s => <SelectItem key={s.student_no} value={s.student_no.toString()}>{s.student_name} ({s.student_no})</SelectItem>)}
+                            {studentsInClass.map(s => <SelectItem key={s.student_no} value={s.student_no.toString()}>{s.student_name}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>
@@ -290,3 +289,5 @@ export default function AiAnalysisPage() {
     </div>
   );
 }
+
+    

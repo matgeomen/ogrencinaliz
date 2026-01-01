@@ -186,7 +186,7 @@ export default function EOkulPage() {
                           <AlertTitle className="text-yellow-800 dark:text-yellow-300">Önemli Not:</AlertTitle>
                           <AlertDescription className="text-yellow-700 dark:text-yellow-300/80 text-sm">
                             Güvenlik nedeniyle şu an için dosya yükleme yöntemini kullanmanızı öneriyoruz. Otomatik giriş özelliği geliştirme aşamasındadır.
-                          </GAlertDescription>
+                          </AlertDescription>
                         </Alert>
 
                         <div className="space-y-4">

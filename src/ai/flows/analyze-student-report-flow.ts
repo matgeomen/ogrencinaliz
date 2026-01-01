@@ -44,12 +44,8 @@ const AnalyzeStudentReportOutputSchema = z.object({
   areasForImprovement: z.array(z.string()).describe('Öğrencinin gelişmesi gereken alanları ve dersleri listeleyen maddeler.'),
   roadmap: z.array(z.object({
     title: z.string().describe('Yol haritası adımının başlığı.'),
-    description: z.string().describe('Yol haritası adımının detaylı açıklaması. Başlık ve açıklama içermeli. Örneğin: **Başlık:** Açıklama'),
-  })).describe('Öğrencinin başarısını artırmak için atılması gereken adımları içeren yol haritası.'),
-  recommendations: z.array(z.object({
-    title: z.string().describe('Öneri başlığı.'),
-    description: z.string().describe('Önerinin detaylı açıklaması.'),
-  })).describe('Öğrencinin genel başarısını ve motivasyonunu artırmak için ek öneriler.'),
+    description: z.string().describe('Yol haritası adımının detaylı açıklaması.'),
+  })).describe('Öğrencinin başarısını artırmak için atılması gereken adımları içeren yol haritası.')
 });
 export type AnalyzeStudentReportOutput = z.infer<
   typeof AnalyzeStudentReportOutputSchema
@@ -88,8 +84,7 @@ Rapor aşağıdaki gibi yapılandırılmalıdır:
 1.  **summary:** Öğrencinin genel akademik performansını, denemeler arasındaki değişimini ve genel potansiyelini özetleyen bir giriş paragrafı yaz. Sana verilen metin formatındaki sonuçları yorumlayarak başla.
 2.  **strengths:** Öğrencinin istikrarlı bir şekilde başarılı olduğu dersleri ve konuları vurgulayan 2-3 maddelik bir liste oluştur.
 3.  **areasForImprovement:** Öğrencinin zorlandığı, netlerinin düşük veya değişken olduğu dersleri tespit eden 2-3 maddelik bir liste oluştur. Özellikle LGS'de katsayısı yüksek olan derslerdeki (Matematik, Fen, Türkçe) duruma dikkat çek.
-4.  **roadmap:** Öğrencinin performansını artırmak için 5-7 adımlık somut ve uygulanabilir bir yol haritası oluştur. Her adım için bir 'title' ve 'description' alanı olmalıdır. Description alanı, adımın başlığını ve detaylı açıklamasını "**Başlık:** Açıklama" formatında içermelidir. Başlıklar kısa ve eyleme yönelik olmalı (örn: "**1. Adım: Detaylı Bireysel ve Ders Bazlı Analiz (Acil Eylem):** Her öğrencinin...").
-5.  **recommendations:** Öğrencinin genel gelişimi için 4-5 maddelik ek öneriler sun. Her önerinin bir 'title' (başlık) ve 'description' (açıklama) alanı olmalıdır (örn: "Ders ve Konu Bazlı Veri Toplama", "Hedef Belirleme Çalıştayı").
+4.  **roadmap:** Öğrencinin performansını artırmak için 3-5 adımlık somut ve uygulanabilir bir yol haritası oluştur. Her adım için bir 'title' ve 'description' alanı olmalıdır. Başlıklar kısa ve eyleme yönelik olmalı (örn: "Konu Tekrar Stratejisi", "Soru Çözüm Teknikleri").
 
 Tüm metinleri profesyonel, yapıcı ve motive edici bir dille yaz.
 
@@ -101,7 +96,7 @@ Tüm metinleri profesyonel, yapıcı ve motive edici bir dille yaz.
 Analiz Edilecek Deneme Sonuçları Özeti:
 {{{examResultsAsText}}}
 
-Lütfen sadece 'summary', 'strengths', 'areasForImprovement', 'roadmap' ve 'recommendations' alanlarını doldurarak bir JSON çıktısı üret.`,
+Lütfen sadece 'summary', 'strengths', 'areasForImprovement' ve 'roadmap' alanlarını doldurarak bir JSON çıktısı üret.`,
 });
 
 const analyzeStudentReportFlow = ai.defineFlow(
@@ -112,18 +107,6 @@ const analyzeStudentReportFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
-    if (output) {
-      // Ensure the description contains the title as requested by the prompt.
-      output.roadmap = output.roadmap.map((item, index) => {
-        if (!item.description.startsWith(`**${index + 1}. Adım`)) {
-            return {
-                title: item.title,
-                description: `**${index + 1}. Adım: ${item.title}:** ${item.description}`
-            }
-        }
-        return item;
-      });
-    }
     return output!;
   }
 );

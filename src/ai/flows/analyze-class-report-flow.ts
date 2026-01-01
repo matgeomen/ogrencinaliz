@@ -38,7 +38,7 @@ const AnalyzeClassReportInputSchema = z.object({
 export type AnalyzeClassReportInput = z.infer<typeof AnalyzeClassReportInputSchema>;
 
 const AnalyzeClassReportOutputSchema = z.object({
-  summary: z.string().describe('Sınıfın genel durumunu özetleyen bir paragraf.'),
+  summary: z.string().describe('Sınıfın genel durumunu, ortalamalarını ve potansiyelini özetleyen bir giriş paragrafı.'),
   strengths: z.array(z.string()).describe('Sınıfın kolektif olarak güçlü olduğu dersleri ve alanları belirten 2-3 madde.'),
   areasForImprovement: z.array(z.string()).describe('Sınıfın kolektif olarak desteklenmesi gereken dersleri veya konuları belirten 2-3 madde.'),
   roadmap: z.array(z.object({
@@ -53,66 +53,28 @@ export type AnalyzeClassReportOutput = z.infer<
 export async function analyzeClassReport(
   input: AnalyzeClassReportInput
 ): Promise<AnalyzeClassReportOutput> {
+  
   const studentCount = new Set(input.examResults.map(r => r.student_no)).size;
   
-  let analyzedResults = input.examResults;
-  const uniqueExamNames = new Set(input.examResults.map(r => r.exam_name));
-
-  if (uniqueExamNames.size > 1) {
-      const studentAverages: { [key: number]: StudentExamResult } = {};
-      const studentCounts: { [key: number]: number } = {};
-
-      input.examResults.forEach(r => {
-          if (!studentAverages[r.student_no]) {
-              studentAverages[r.student_no] = { ...r, exam_name: 'Ortalama', toplam_dogru: 0, toplam_yanlis: 0, toplam_net: 0, toplam_puan: 0, turkce_d: 0, turkce_y: 0, turkce_net: 0, tarih_d: 0, tarih_y: 0, tarih_net: 0, din_d: 0, din_y: 0, din_net: 0, ing_d: 0, ing_y: 0, ing_net: 0, mat_d: 0, mat_y: 0, mat_net: 0, fen_d: 0, fen_y: 0, fen_net: 0 };
-              studentCounts[r.student_no] = 0;
-          }
-          studentAverages[r.student_no].toplam_net += r.toplam_net;
-          studentAverages[r.student_no].toplam_puan += r.toplam_puan;
-          studentAverages[r.student_no].turkce_net += r.turkce_net;
-          studentAverages[r.student_no].mat_net += r.mat_net;
-          studentAverages[r.student_no].fen_net += r.fen_net;
-          studentAverages[r.student_no].tarih_net += r.tarih_net;
-          studentAverages[r.student_no].din_net += r.din_net;
-          studentAverages[r.student_no].ing_net += r.ing_net;
-          studentCounts[r.student_no]++;
-      });
-
-      Object.keys(studentAverages).forEach(student_no_str => {
-          const student_no = Number(student_no_str);
-          const count = studentCounts[student_no];
-          if (count > 0) {
-            studentAverages[student_no].toplam_net /= count;
-            studentAverages[student_no].toplam_puan /= count;
-            studentAverages[student_no].turkce_net /= count;
-            studentAverages[student_no].mat_net /= count;
-            studentAverages[student_no].fen_net /= count;
-            studentAverages[student_no].tarih_net /= count;
-            studentAverages[student_no].din_net /= count;
-            studentAverages[student_no].ing_net /= count;
-          }
-      });
-      analyzedResults = Object.values(studentAverages);
-  }
-
-  const entryCount = analyzedResults.length;
+  const totalNet = input.examResults.reduce((sum, r) => sum + r.toplam_net, 0);
+  const totalScore = input.examResults.reduce((sum, r) => sum + r.toplam_puan, 0);
+  const entryCount = input.examResults.length;
+  
   if (entryCount === 0) {
-    throw new Error("No data available for analysis.");
+    throw new Error("Analiz için veri bulunamadı.");
   }
   
-  const totalNet = analyzedResults.reduce((sum, r) => sum + r.toplam_net, 0);
-  const totalScore = analyzedResults.reduce((sum, r) => sum + r.toplam_puan, 0);
   const avgNet = totalNet / entryCount;
   const avgScore = totalScore / entryCount;
   
-  const avgTurkceNet = analyzedResults.reduce((sum, r) => sum + r.turkce_net, 0) / entryCount;
-  const avgMatNet = analyzedResults.reduce((sum, r) => sum + r.mat_net, 0) / entryCount;
-  const avgFenNet = analyzedResults.reduce((sum, r) => sum + r.fen_net, 0) / entryCount;
-  const avgTarihNet = analyzedResults.reduce((sum, r) => sum + r.tarih_net, 0) / entryCount;
-  const avgDinNet = analyzedResults.reduce((sum, r) => sum + r.din_net, 0) / entryCount;
-  const avgIngNet = analyzedResults.reduce((sum, r) => sum + r.ing_net, 0) / entryCount;
+  const avgTurkceNet = input.examResults.reduce((sum, r) => sum + r.turkce_net, 0) / entryCount;
+  const avgMatNet = input.examResults.reduce((sum, r) => sum + r.mat_net, 0) / entryCount;
+  const avgFenNet = input.examResults.reduce((sum, r) => sum + r.fen_net, 0) / entryCount;
+  const avgTarihNet = input.examResults.reduce((sum, r) => sum + r.tarih_net, 0) / entryCount;
+  const avgDinNet = input.examResults.reduce((sum, r) => sum + r.din_net, 0) / entryCount;
+  const avgIngNet = input.examResults.reduce((sum, r) => sum + r.ing_net, 0) / entryCount;
 
-  const summaryText = `Sınıfta ${studentCount} öğrenci bulunmaktadır. Analiz edilen "${input.examName}" kapsamındaki verilere göre sınıfın genel net ortalaması ${avgNet.toFixed(2)}, puan ortalaması ise ${avgScore.toFixed(2)}'dir. Ders bazlı ortalama netler: Türkçe ${avgTurkceNet.toFixed(2)}, Matematik ${avgMatNet.toFixed(2)}, Fen Bilimleri ${avgFenNet.toFixed(2)}, T.C. İnkılap Tarihi ${avgTarihNet.toFixed(2)}, Din Kültürü ${avgDinNet.toFixed(2)}, İngilizce ${avgIngNet.toFixed(2)}.`;
+  const summaryText = `Analiz edilen "${input.examName}" kapsamındaki ${entryCount} sınav sonucuna göre, sınıfta ${studentCount} öğrenci bulunmaktadır. Sınıfın genel net ortalaması ${avgNet.toFixed(2)}, puan ortalaması ise ${avgScore.toFixed(2)}'dir. Ders bazlı ortalama netler şöyledir: Türkçe ${avgTurkceNet.toFixed(2)}, Matematik ${avgMatNet.toFixed(2)}, Fen Bilimleri ${avgFenNet.toFixed(2)}, T.C. İnkılap Tarihi ${avgTarihNet.toFixed(2)}, Din Kültürü ${avgDinNet.toFixed(2)}, İngilizce ${avgIngNet.toFixed(2)}.`;
 
   return analyzeClassReportFlow({
     className: input.className,
@@ -162,3 +124,5 @@ const analyzeClassReportFlow = ai.defineFlow(
     return output!;
   }
 );
+
+    

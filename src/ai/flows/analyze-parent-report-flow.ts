@@ -32,7 +32,7 @@ const StudentExamResultSchema = z.object({
 
 const AnalyzeParentReportInputSchema = z.object({
   studentName: z.string().describe('Öğrencinin adı.'),
-  examName: z.string().describe("Analiz edilen deneme sınavı (veya 'Tüm Denemeler')."),
+  examName: z.string().describe("Analiz edilen deneme sınavları (veya 'Tüm Denemeler')."),
   examResults: z.array(StudentExamResultSchema).describe("Öğrencinin ilgili deneme sınavı sonuçları."),
 });
 export type AnalyzeParentReportInput = z.infer<typeof AnalyzeParentReportInputSchema>;

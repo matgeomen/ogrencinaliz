@@ -40,32 +40,31 @@ const handleDownloadPdf = async (reportId: string, fileName: string) => {
     const contentWidth = pdfWidth - (margin * 2);
     let currentY = margin;
 
-    // Get all top-level cards within the report element
     const cards = Array.from(reportElement.querySelectorAll<HTMLElement>(':scope > .print-card'));
 
     for (const card of cards) {
         try {
             const canvas = await html2canvas(card, {
-                scale: 1.5, // Reduced scale to optimize file size
+                scale: 1, // Optimized scale
                 useCORS: true,
                 logging: false,
                 windowWidth: card.scrollWidth,
                 windowHeight: card.scrollHeight,
             });
 
-            const imgData = canvas.toDataURL('image/png');
+            const imgData = canvas.toDataURL('image/png', 0.9); // Use jpeg with quality for smaller size
             const imgWidth = canvas.width;
             const imgHeight = canvas.height;
             const ratio = imgWidth / imgHeight;
-            const contentHeight = contentWidth / ratio;
+            let contentHeight = contentWidth / ratio;
             
-            if (currentY > margin && currentY + contentHeight > pdf.internal.pageSize.getHeight() - margin) {
+            if (currentY > margin && (currentY + contentHeight) > pdf.internal.pageSize.getHeight() - margin) {
                 pdf.addPage();
                 currentY = margin;
             }
             
             pdf.addImage(imgData, 'PNG', margin, currentY, contentWidth, contentHeight);
-            currentY += contentHeight + 5; // Add a small gap between cards
+            currentY += contentHeight + 5;
 
         } catch(error) {
             console.error("PDF için kart işlenirken hata oluştu:", error);
@@ -142,21 +141,12 @@ function StudentReport() {
     const handleExamChange = (exam: string) => {
         setAiAnalysis(null);
         setSelectedExams(prev => {
-            const isAllSelected = prev.length === exams.length;
             if (exam === 'all') {
-                return isAllSelected ? [] : exams.map(e => e);
+                return prev.length === exams.length ? [] : exams;
             }
-            let newExams = prev.includes(exam) 
+            const newExams = prev.includes(exam) 
                 ? prev.filter(e => e !== exam)
                 : [...prev, exam];
-
-            // Filter out 'all' if it exists
-            newExams = newExams.filter(e => e !== 'all');
-
-            if (newExams.length === exams.length) {
-                // all exams are selected individually
-                return exams;
-            }
             return newExams;
         });
     }
@@ -408,6 +398,14 @@ function ClassReport() {
     const [aiAnalysis, setAiAnalysis] = useState<AnalyzeClassReportOutput | null>(null);
     const { toast } = useToast();
 
+    const classDataForTable = useMemo(() => {
+        if (!selectedClass || selectedExams.length === 0) return [];
+         return studentData.filter(d => 
+            d.class === selectedClass && 
+            (selectedExams.includes('all') || selectedExams.includes(d.exam_name))
+        );
+    }, [studentData, selectedClass, selectedExams]);
+
     const handleGenerate = async () => {
         if (!selectedClass) {
             toast({ title: "Lütfen bir sınıf seçin.", variant: 'destructive' });
@@ -422,7 +420,7 @@ function ClassReport() {
 
         const classData = studentData.filter(d => 
             d.class === selectedClass && 
-            (selectedExams.length === exams.length || selectedExams.includes(d.exam_name))
+            (selectedExams.includes('all') || selectedExams.includes(d.exam_name))
         );
 
         if (classData.length === 0) {
@@ -447,7 +445,7 @@ function ClassReport() {
         }
     }
 
-    const examNameForTitle = selectedExams.length === 0 ? "Deneme Seçilmedi" : selectedExams.length === exams.length ? 'Tüm Denemeler' : selectedExams.join(', ');
+    const examNameForTitle = selectedExams.length === 0 ? "Deneme Seçilmedi" : selectedExams.length === exams.length || selectedExams.includes('all') ? 'Tüm Denemeler' : selectedExams.join(', ');
 
     const handleClassChange = (c: string) => {
         setSelectedClass(c);
@@ -457,19 +455,13 @@ function ClassReport() {
      const handleExamChange = (exam: string) => {
         setAiAnalysis(null);
         setSelectedExams(prev => {
-            const isAllSelected = prev.length === exams.length;
             if (exam === 'all') {
-                return isAllSelected ? [] : exams.map(e => e);
+                return prev.length === exams.length ? [] : exams;
             }
              let newExams = prev.includes(exam) 
                 ? prev.filter(e => e !== exam)
                 : [...prev, exam];
 
-            newExams = newExams.filter(e => e !== 'all');
-
-            if (newExams.length === exams.length) {
-                return exams;
-            }
             return newExams;
         });
     }
@@ -642,6 +634,37 @@ function ClassReport() {
                                 </CardContent>
                             </Card>
                         )}
+                        {classDataForTable.length > 0 && (
+                             <Card className="print-card">
+                                <CardHeader>
+                                    <CardTitle>Detaylı Sonuçlar</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="relative w-full overflow-auto rounded-md border">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Öğrenci</TableHead>
+                                                    <TableHead>Deneme</TableHead>
+                                                    <TableHead className="text-right">Net</TableHead>
+                                                    <TableHead className="text-right">Puan</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {classDataForTable.map(result => (
+                                                    <TableRow key={`${result.student_no}-${result.exam_name}`}>
+                                                        <TableCell>{result.student_name}</TableCell>
+                                                        <TableCell>{result.exam_name}</TableCell>
+                                                        <TableCell className="text-right">{result.toplam_net.toFixed(2)}</TableCell>
+                                                        <TableCell className="text-right font-semibold">{result.toplam_puan.toFixed(2)}</TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
                     </>
                 )}
             </div>
@@ -653,7 +676,7 @@ function ParentReport() {
     const { studentData, classes, exams } = useData();
     const [selectedClass, setSelectedClass] = useState<string>('');
     const [selectedStudentNo, setSelectedStudentNo] = useState<string>('');
-    const [selectedExam, setSelectedExam] = useState<string>('all');
+    const [selectedExams, setSelectedExams] = useState<string[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
     const [aiAnalysis, setAiAnalysis] = useState<AnalyzeParentReportOutput | null>(null);
@@ -667,11 +690,11 @@ function ParentReport() {
     }, [studentData, selectedClass]);
 
     const selectedStudentResults = useMemo(() => {
-        if (!selectedStudentNo) return [];
+        if (!selectedStudentNo || selectedExams.length === 0) return [];
         return studentData
-            .filter(s => s.student_no.toString() === selectedStudentNo && (selectedExam === 'all' || s.exam_name === selectedExam))
+            .filter(s => s.student_no.toString() === selectedStudentNo && (selectedExams.includes('all') || selectedExams.includes(s.exam_name)))
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [studentData, selectedStudentNo, selectedExam]);
+    }, [studentData, selectedStudentNo, selectedExams]);
 
     const handleGenerate = async () => {
         if (!selectedStudentNo || selectedStudentResults.length === 0) {
@@ -684,7 +707,7 @@ function ParentReport() {
         try {
             const result = await analyzeParentReport({
                 studentName: selectedStudentName || 'Bilinmeyen Öğrenci',
-                examName: selectedExam === 'all' ? 'Tüm Denemeler' : selectedExam,
+                examName: examNameForTitle,
                 examResults: selectedStudentResults,
             });
             setAiAnalysis(result);
@@ -698,20 +721,30 @@ function ParentReport() {
     }
 
     const selectedStudentName = studentsInClass.find(s => s.student_no.toString() === selectedStudentNo)?.student_name;
-    const examNameForTitle = selectedExam === 'all' ? 'Tüm Denemeler' : selectedExam;
+    const examNameForTitle = selectedExams.length === 0 ? "Deneme Seçilmedi" : selectedExams.includes('all') || selectedExams.length === exams.length ? 'Tüm Denemeler' : selectedExams.join(', ');
 
     const handleClassChange = (c: string) => {
         setSelectedClass(c);
         setSelectedStudentNo('');
+        setSelectedExams([]);
         setAiAnalysis(null);
     }
     const handleStudentChange = (studentNo: string) => {
         setSelectedStudentNo(studentNo);
+        setSelectedExams([]);
         setAiAnalysis(null);
     }
      const handleExamChange = (exam: string) => {
-        setSelectedExam(exam);
         setAiAnalysis(null);
+        setSelectedExams(prev => {
+            if (exam === 'all') {
+                return prev.length === exams.length ? [] : exams;
+            }
+            const newExams = prev.includes(exam) 
+                ? prev.filter(e => e !== exam)
+                : [...prev, exam];
+            return newExams;
+        });
     }
 
     const onDownload = async () => {
@@ -733,14 +766,33 @@ function ParentReport() {
                         <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Öğrenci Seçin"/></SelectTrigger>
                         <SelectContent>{studentsInClass.map(s => <SelectItem key={s.student_no} value={s.student_no.toString()}>{s.student_name}</SelectItem>)}</SelectContent>
                     </Select>
-                    <Select value={selectedExam} onValueChange={handleExamChange} disabled={!selectedStudentNo}>
-                        <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Deneme Seçin"/></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value='all'>Tüm Denemeler</SelectItem>
-                            {exams.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <Button onClick={handleGenerate} disabled={isGenerating || !selectedStudentNo} className="w-full sm:w-auto">
+                     <DropdownMenu>
+                        <DropdownMenuTrigger asChild disabled={!selectedStudentNo}>
+                            <Button variant="outline" className="w-full sm:w-[200px] justify-between">
+                                Deneme Seçin ({selectedExams.length}) <ChevronDown className="h-4 w-4 opacity-50" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-56">
+                            <DropdownMenuLabel>Deneme Sınavları</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuCheckboxItem
+                                checked={selectedExams.length === exams.length}
+                                onCheckedChange={() => handleExamChange('all')}
+                            >
+                                Tüm Denemeler
+                            </DropdownMenuCheckboxItem>
+                            {exams.map(e => (
+                                <DropdownMenuCheckboxItem
+                                    key={e}
+                                    checked={selectedExams.includes(e)}
+                                    onCheckedChange={() => handleExamChange(e)}
+                                >
+                                    {e}
+                                </DropdownMenuCheckboxItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Button onClick={handleGenerate} disabled={isGenerating || !selectedStudentNo || selectedExams.length === 0} className="w-full sm:w-auto">
                         {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BrainCircuit className="mr-2 h-4 w-4" />}
                         Rapor Oluştur
                     </Button>
@@ -755,6 +807,48 @@ function ParentReport() {
             )}
 
             <div id="parent-report-content" className="print-container mt-6 space-y-6">
+                {(selectedStudentResults.length > 0 && !isGenerating) && (
+                     <Card className="mt-6 print-card">
+                        <CardHeader>
+                            <CardTitle>{selectedStudentName} - Deneme Sonuçları</CardTitle>
+                            <CardDescription>{examNameForTitle}</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                             <div className="relative w-full overflow-auto rounded-md border">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Deneme</TableHead>
+                                            <TableHead className="text-right">Toplam Net</TableHead>
+                                            <TableHead className="text-right">Toplam Puan</TableHead>
+                                            <TableHead className="text-center">Durum</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {selectedStudentResults.map(result => {
+                                            const status = getStatus(result.toplam_puan);
+                                            return (
+                                                <TableRow key={result.exam_name}>
+                                                    <TableCell className="font-medium">{result.exam_name}</TableCell>
+                                                    <TableCell className="text-right font-medium">{result.toplam_net.toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right font-bold text-primary">{result.toplam_puan.toFixed(2)}</TableCell>
+                                                    <TableCell className="text-center">
+                                                        <Badge variant={status.variant} className={cn(
+                                                            status.label === 'Çok İyi' && 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200',
+                                                            status.label === 'İyi' && 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200',
+                                                            status.label === 'Orta' && 'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200',
+                                                            status.label === 'Zayıf' && 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200'
+                                                        )}>{status.label}</Badge>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )
+                                        })}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </CardContent>
+                     </Card>
+                )}
                 {aiAnalysis && (
                     <>
                         <Card className="print-card">

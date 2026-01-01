@@ -13,7 +13,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import * as pdfjsLib from 'pdfjs-dist';
+import * as pdfjsLib from 'pdfjs-dist/build/pdf';
 
 // Set worker source
 if (typeof window !== 'undefined') {
@@ -67,7 +67,7 @@ export default function EOkulPage() {
                 const text = await page.getTextContent();
                 textContent += text.items.map(item => ('str' in item ? item.str : '')).join(' ');
             }
-        } else if (file.type === 'text/html' || file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
+        } else if (file.type === 'text/html' || file.type.startsWith('application/vnd.openxmlformats-officedocument')) {
              textContent = await file.text();
         } else {
             throw new Error("Desteklenmeyen dosya formatı.");
@@ -164,7 +164,6 @@ export default function EOkulPage() {
                   <Card className="mt-4">
                       <CardHeader>
                           <CardTitle>AI Analiz Sonucu</CardTitle>
-                          <CardDescription>Yüklenen E-Okul belgesinin yapay zeka tarafından yapılan analizi.</CardDescription>
                       </CardHeader>
                       <CardContent>
                           <Textarea value={pdfAnalysis} readOnly className="h-64 whitespace-pre-wrap bg-secondary/50" />
@@ -221,3 +220,5 @@ export default function EOkulPage() {
     </div>
   );
 }
+
+    

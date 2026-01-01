@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, BrainCircuit, Lightbulb, TrendingDown, Route, CheckCircle, GraduationCap, Users, User, ChevronDown } from 'lucide-react';
 import { analyzeStudentReport, AnalyzeStudentReportOutput } from '@/ai/flows/analyze-student-report-flow';
 import { analyzeClassReport, AnalyzeClassReportOutput } from '@/ai/flows/analyze-class-report-flow';
+import { Label } from '@/components/ui/label';
 
 type AnalysisResult = AnalyzeStudentReportOutput | AnalyzeClassReportOutput;
 

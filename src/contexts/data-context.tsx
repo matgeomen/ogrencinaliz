@@ -7,6 +7,7 @@ import { mockStudentData } from '@/lib/mock-data';
 interface DataContextType {
   studentData: StudentExamResult[];
   addStudentData: (newData: StudentExamResult[]) => void;
+  deleteExam: (examName: string) => void;
   exams: string[];
   selectedExam: string;
   setSelectedExam: (examName: string) => void;
@@ -33,15 +34,21 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setLoading(false);
   }, []);
 
+  const exams = useMemo(() => Array.from(new Set(studentData.map(d => d.exam_name))).sort(), [studentData]);
+  const classes = useMemo(() => Array.from(new Set(studentData.map(d => d.class))).sort(), [studentData]);
+
   useEffect(() => {
     if (studentData.length > 0) {
       localStorage.setItem('studentData', JSON.stringify(studentData));
-      const uniqueExams = Array.from(new Set(studentData.map(d => d.exam_name)));
-      if (!selectedExam && uniqueExams.length > 0) {
-        setSelectedExam(uniqueExams[0]);
+      
+      // If the selected exam is no longer in the list of exams, reset it.
+      if (selectedExam && !exams.includes(selectedExam)) {
+        setSelectedExam(exams[0] || '');
+      } else if (!selectedExam && exams.length > 0) {
+        setSelectedExam(exams[0]);
       }
     }
-  }, [studentData, selectedExam]);
+  }, [studentData, selectedExam, exams]);
 
 
   const addStudentData = (newData: StudentExamResult[]) => {
@@ -59,12 +66,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const exams = useMemo(() => Array.from(new Set(studentData.map(d => d.exam_name))).sort(), [studentData]);
-  const classes = useMemo(() => Array.from(new Set(studentData.map(d => d.class))).sort(), [studentData]);
+  const deleteExam = (examNameToDelete: string) => {
+    setStudentData(prevData => prevData.filter(d => d.exam_name !== examNameToDelete));
+  };
 
   const value = {
     studentData,
     addStudentData,
+    deleteExam,
     exams,
     selectedExam,
     setSelectedExam,

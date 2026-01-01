@@ -8,10 +8,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { FileText, Users, TrendingUp, Eye, Trash2, X } from 'lucide-react';
 import { StudentExamResult } from '@/types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/hooks/use-toast';
 
 
 interface ExamStats {
@@ -162,7 +164,8 @@ function ExamDetailModal({ examName }: { examName: string }) {
 
 
 export default function ExamsPage() {
-  const { studentData, exams, loading } = useData();
+  const { studentData, exams, loading, deleteExam } = useData();
+  const { toast } = useToast();
 
   const overallStats = useMemo(() => {
     const totalParticipation = exams.reduce((acc, examName) => {
@@ -192,6 +195,14 @@ export default function ExamsPage() {
       return { exam_name: examName, date, studentCount, avgScore, successRate };
     });
   }, [studentData, exams]);
+
+  const handleDelete = (examName: string) => {
+    deleteExam(examName);
+    toast({
+        title: "Deneme Silindi",
+        description: `"${examName}" denemesi ve ilişkili tüm veriler başarıyla silindi.`
+    });
+  }
 
   return (
     <div className="space-y-6">
@@ -256,28 +267,46 @@ export default function ExamsPage() {
                   ))
                 ) : examStats.length > 0 ? (
                   examStats.map((exam) => (
-                    <Dialog key={exam.exam_name}>
-                        <TableRow>
-                          <TableCell className="font-medium">{exam.exam_name}</TableCell>
-                          <TableCell>{exam.date !== 'N/A' ? new Date(exam.date).toLocaleDateString('tr-TR') : 'N/A'}</TableCell>
-                          <TableCell>{exam.studentCount}</TableCell>
-                          <TableCell>{exam.avgScore.toFixed(2)}</TableCell>
-                          <TableCell>{`%${exam.successRate.toFixed(1)}`}</TableCell>
-                          <TableCell className="text-center">
-                            <div className="flex justify-center gap-2">
+                    <TableRow key={exam.exam_name}>
+                      <TableCell className="font-medium">{exam.exam_name}</TableCell>
+                      <TableCell>{exam.date !== 'N/A' ? new Date(exam.date).toLocaleDateString('tr-TR') : 'N/A'}</TableCell>
+                      <TableCell>{exam.studentCount}</TableCell>
+                      <TableCell>{exam.avgScore.toFixed(2)}</TableCell>
+                      <TableCell>{`%${exam.successRate.toFixed(1)}`}</TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex justify-center gap-2">
+                            <Dialog>
                                 <DialogTrigger asChild>
                                   <Button variant="ghost" size="icon" className="h-8 w-8">
                                     <Eye className="h-4 w-4" />
                                   </Button>
                                 </DialogTrigger>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      <ExamDetailModal examName={exam.exam_name} />
-                    </Dialog>
+                                <ExamDetailModal examName={exam.exam_name} />
+                            </Dialog>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Emin misiniz?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Bu işlem geri alınamaz. "{exam.exam_name}" denemesini ve ona ait tüm verileri kalıcı olarak silecektir.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>İptal</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDelete(exam.exam_name)}>
+                                            Sil
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
                   ))
                 ) : (
                   <TableRow>

@@ -45,7 +45,8 @@ import {
   Trophy,
   FileBox,
   Upload,
-  ChevronDown
+  GitCompareArrows,
+  Settings
 } from 'lucide-react';
 
 const navItems = [
@@ -55,7 +56,9 @@ const navItems = [
   { href: '/analytics', label: 'Analizler', icon: BarChart3 },
   { href: '/rankings', label: 'Sıralamalar', icon: Trophy },
   { href: '/reports', label: 'Raporlar', icon: FileBox },
+  { href: '/compare', label: 'Karşılaştır', icon: GitCompareArrows },
   { href: '/upload', label: 'Yükleme', icon: Upload },
+  { href: '/settings', label: 'Ayarlar', icon: Settings },
 ];
 
 function AppHeader() {
@@ -66,7 +69,7 @@ function AppHeader() {
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
       <div className="flex-1">
         <h1 className="text-lg font-semibold md:hidden">
-          LGS Radar
+          Öğrenci Takip
         </h1>
       </div>
       <div className="flex flex-1 items-center justify-end gap-4">
@@ -129,7 +132,7 @@ function AppSidebar() {
         <Button variant="ghost" asChild className="h-auto justify-start gap-2 px-2 text-base">
           <Link href="/dashboard">
             <Icons.logo className="size-6 shrink-0" />
-            <span className="font-headline text-lg font-semibold">LGS Radar</span>
+            <span className="font-headline text-lg font-semibold">Öğrenci Takip</span>
           </Link>
         </Button>
       </SidebarHeader>

@@ -6,11 +6,13 @@ import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { UploadCloud, File, X, Loader2, Home, AlertTriangle } from 'lucide-react';
+import { UploadCloud, File, X, Loader2, Home, AlertTriangle, LogIn, Database } from 'lucide-react';
 import { analyzeEokulData } from '@/ai/flows/analyze-eokul-data';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 
 // Dynamically import pdfjs-dist to avoid SSR issues
 const pdfjsPromise = import('pdfjs-dist');
@@ -102,9 +104,9 @@ export default function EOkulPage() {
         
         <Tabs defaultValue="upload" className="w-full">
             <TabsList className="grid w-full grid-cols-3 max-w-md">
-                <TabsTrigger value="upload">Dosya Yükle</TabsTrigger>
-                <TabsTrigger value="login" disabled>Giriş Yap</TabsTrigger>
-                <TabsTrigger value="data" disabled>Veriler</TabsTrigger>
+                <TabsTrigger value="upload"><UploadCloud className="w-4 h-4 mr-2"/>Dosya Yükle</TabsTrigger>
+                <TabsTrigger value="login"><LogIn className="w-4 h-4 mr-2"/>Giriş Yap</TabsTrigger>
+                <TabsTrigger value="data" disabled><Database className="w-4 h-4 mr-2"/>Veriler</TabsTrigger>
             </TabsList>
             <TabsContent value="upload">
                 <Card className="mt-4">
@@ -117,7 +119,7 @@ export default function EOkulPage() {
                     <CardContent className="space-y-6">
                         <div {...getRootProps()} className="border-2 border-dashed border-muted-foreground/50 rounded-lg p-12 text-center cursor-pointer hover:border-primary transition-colors">
                             <input {...getInputProps()} />
-                            <Home className="mx-auto h-12 w-12 text-muted-foreground" />
+                            <UploadCloud className="mx-auto h-12 w-12 text-muted-foreground" />
                             {isDragActive ?
                                 <p className="mt-4 text-muted-foreground">Dosyayı buraya bırakın...</p> :
                                 <>
@@ -163,21 +165,64 @@ export default function EOkulPage() {
 
                     </CardContent>
                 </Card>
+                {pdfAnalysis && (
+                  <Card className="mt-4">
+                      <CardHeader>
+                          <CardTitle>AI Analiz Sonucu</CardTitle>
+                          <CardDescription>Yüklenen E-Okul belgesinin yapay zeka tarafından yapılan analizi.</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                          <Textarea value={pdfAnalysis} readOnly className="h-64 whitespace-pre-wrap bg-secondary/50" />
+                      </CardContent>
+                  </Card>
+                )}
+            </TabsContent>
+            <TabsContent value="login">
+                <Card className="mt-4">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <LogIn className="h-5 w-5" />
+                            E-Okul Giriş
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <Alert variant="default" className="bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800">
+                          <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                          <AlertTitle className="text-yellow-800 dark:text-yellow-300">Önemli Not:</AlertTitle>
+                          <AlertDescription className="text-yellow-700 dark:text-yellow-300/80 text-sm">
+                            Güvenlik nedeniyle şu an için dosya yükleme yöntemini kullanmanızı öneriyoruz. Otomatik giriş özelliği geliştirme aşamasındadır.
+                          </AlertDescription>
+                        </Alert>
+
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="tc-kimlik">T.C. Kimlik No</Label>
+                                <Input id="tc-kimlik" placeholder="T.C. Kimlik numaranız" disabled />
+                            </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="eokul-sifre">E-Okul Şifresi</Label>
+                                <Input id="eokul-sifre" type="password" placeholder="E-Okul şifreniz" disabled />
+                            </div>
+                            <Button size="lg" className="w-full" disabled>
+                                <LogIn className="mr-2 h-4 w-4" />
+                                Giriş Yap ve Verileri Çek
+                            </Button>
+                        </div>
+                        
+                        <Card className="bg-secondary/50">
+                            <CardContent className="p-4 text-sm text-muted-foreground">
+                                <p className="font-semibold mb-2 text-foreground">Bu özellik aktifleştiğinde:</p>
+                                <ul className="list-disc list-inside space-y-1">
+                                    <li>E-Okul'a otomatik giriş yapılacak</li>
+                                    <li>Hızlı not girişi sayfasından veriler çekilecek</li>
+                                    <li>Öğrenci notları otomatik kaydedilecek</li>
+                                </ul>
+                            </CardContent>
+                        </Card>
+                    </CardContent>
+                </Card>
             </TabsContent>
         </Tabs>
-
-      
-      {pdfAnalysis && (
-        <Card>
-            <CardHeader>
-                <CardTitle>AI Analiz Sonucu</CardTitle>
-                <CardDescription>Yüklenen E-Okul belgesinin yapay zeka tarafından yapılan analizi.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Textarea value={pdfAnalysis} readOnly className="h-64 whitespace-pre-wrap bg-secondary/50" />
-            </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

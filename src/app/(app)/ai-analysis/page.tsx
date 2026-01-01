@@ -133,8 +133,84 @@ export default function AiAnalysisPage() {
     }
   }
 
+  const renderStudentResultsTable = () => (
+     <Card>
+        <CardHeader>
+            <CardTitle>{studentsInClass.find(s => s.student_no.toString() === selectedStudentNo)?.student_name} - Seçilen Sonuçlar</CardTitle>
+            <CardDescription>{examNameForTitle}</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Deneme</TableHead>
+                        <TableHead className="text-right">Net</TableHead>
+                        <TableHead className="text-right">Puan</TableHead>
+                        <TableHead className="text-center">Durum</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {selectedResults.map(result => {
+                        const status = getStatus(result.toplam_puan);
+                        return (
+                            <TableRow key={result.exam_name}>
+                                <TableCell className="font-medium">{result.exam_name}</TableCell>
+                                <TableCell className="text-right font-medium">{result.toplam_net.toFixed(2)}</TableCell>
+                                <TableCell className="text-right font-bold text-primary">{result.toplam_puan.toFixed(2)}</TableCell>
+                                <TableCell className="text-center">
+                                    <Badge variant={status.variant} className={cn(
+                                        status.label === 'Çok İyi' && 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200',
+                                        status.label === 'İyi' && 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200',
+                                        status.label === 'Orta' && 'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200',
+                                        status.label === 'Zayıf' && 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200'
+                                    )}>{status.label}</Badge>
+                                </TableCell>
+                            </TableRow>
+                        )
+                    })}
+                </TableBody>
+            </Table>
+        </CardContent>
+      </Card>
+  )
+
+  const renderClassResultsTable = () => (
+     <Card>
+        <CardHeader>
+            <CardTitle>{selectedClass} Sınıfı - Seçilen Sonuçlar</CardTitle>
+            <CardDescription>{examNameForTitle}</CardDescription>
+        </CardHeader>
+        <CardContent>
+             <div className="max-h-96 overflow-y-auto">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Öğrenci</TableHead>
+                            <TableHead>Deneme</TableHead>
+                            <TableHead className="text-right">Net</TableHead>
+                            <TableHead className="text-right">Puan</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {selectedResults.map((result, index) => (
+                            <TableRow key={`${result.student_no}-${result.exam_name}-${index}`}>
+                                <TableCell>{result.student_name}</TableCell>
+                                <TableCell>{result.exam_name}</TableCell>
+                                <TableCell className="text-right">{result.toplam_net.toFixed(2)}</TableCell>
+                                <TableCell className="text-right font-semibold">{result.toplam_puan.toFixed(2)}</TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
+        </CardContent>
+      </Card>
+  )
+
+
   const renderStudentReport = (result: AnalyzeStudentReportOutput) => (
     <>
+      {renderStudentResultsTable()}
       <Card>
         <CardHeader>
             <CardTitle>{studentsInClass.find(s => s.student_no.toString() === selectedStudentNo)?.student_name} - AI Değerlendirmesi</CardTitle>
@@ -208,6 +284,7 @@ export default function AiAnalysisPage() {
   
   const renderClassReport = (result: AnalyzeClassReportOutput) => (
     <>
+      {renderClassResultsTable()}
       <Card>
         <CardHeader>
           <CardTitle>{selectedClass} Sınıfı - AI Değerlendirmesi</CardTitle>
@@ -282,80 +359,10 @@ export default function AiAnalysisPage() {
   const renderInitialContent = () => {
     if (selectedResults.length > 0) {
       if (analysisType === 'student') {
-        return (
-          <Card>
-            <CardHeader>
-                <CardTitle>{studentsInClass.find(s => s.student_no.toString() === selectedStudentNo)?.student_name} - Seçilen Sonuçlar</CardTitle>
-                <CardDescription>{examNameForTitle}</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Deneme</TableHead>
-                            <TableHead className="text-right">Net</TableHead>
-                            <TableHead className="text-right">Puan</TableHead>
-                            <TableHead className="text-center">Durum</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {selectedResults.map(result => {
-                            const status = getStatus(result.toplam_puan);
-                            return (
-                                <TableRow key={result.exam_name}>
-                                    <TableCell className="font-medium">{result.exam_name}</TableCell>
-                                    <TableCell className="text-right font-medium">{result.toplam_net.toFixed(2)}</TableCell>
-                                    <TableCell className="text-right font-bold text-primary">{result.toplam_puan.toFixed(2)}</TableCell>
-                                    <TableCell className="text-center">
-                                        <Badge variant={status.variant} className={cn(
-                                            status.label === 'Çok İyi' && 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200',
-                                            status.label === 'İyi' && 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200',
-                                            status.label === 'Orta' && 'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200',
-                                            status.label === 'Zayıf' && 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200'
-                                        )}>{status.label}</Badge>
-                                    </TableCell>
-                                </TableRow>
-                            )
-                        })}
-                    </TableBody>
-                </Table>
-            </CardContent>
-          </Card>
-        );
+        return renderStudentResultsTable();
       }
       if (analysisType === 'class') {
-         return (
-          <Card>
-            <CardHeader>
-                <CardTitle>{selectedClass} Sınıfı - Seçilen Sonuçlar</CardTitle>
-                <CardDescription>{examNameForTitle}</CardDescription>
-            </CardHeader>
-            <CardContent>
-                 <div className="max-h-96 overflow-y-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Öğrenci</TableHead>
-                                <TableHead>Deneme</TableHead>
-                                <TableHead className="text-right">Net</TableHead>
-                                <TableHead className="text-right">Puan</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {selectedResults.map((result, index) => (
-                                <TableRow key={`${result.student_no}-${result.exam_name}-${index}`}>
-                                    <TableCell>{result.student_name}</TableCell>
-                                    <TableCell>{result.exam_name}</TableCell>
-                                    <TableCell className="text-right">{result.toplam_net.toFixed(2)}</TableCell>
-                                    <TableCell className="text-right font-semibold">{result.toplam_puan.toFixed(2)}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </div>
-            </CardContent>
-          </Card>
-        );
+         return renderClassResultsTable();
       }
     }
 
@@ -467,7 +474,7 @@ export default function AiAnalysisPage() {
       </Card>
       
       <div className="mt-6 space-y-6">
-        {analysisResult ? renderAnalysisResult() : renderInitialContent()}
+        {renderAnalysisResult()}
       </div>
     </div>
   );

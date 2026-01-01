@@ -102,50 +102,52 @@ export default function RankingsPage() {
 
       <Card>
         <CardContent className="pt-6">
-          <div className="relative w-full overflow-auto rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                    {sortableColumns.map(col => renderSortableHeader(col))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  [...Array(10)].map((_, i) => (
-                    <TableRow key={i}>
-                      <TableCell colSpan={sortableColumns.length}><Skeleton className="h-8" /></TableCell>
+          <div className="rounded-md border">
+            <div className="relative w-full overflow-auto">
+                <Table>
+                <TableHeader>
+                    <TableRow>
+                        {sortableColumns.map(col => renderSortableHeader(col))}
                     </TableRow>
-                  ))
-                ) : sortedData.length > 0 ? (
-                  sortedData.map((student, index) => (
-                    <TableRow key={student.student_no}>
-                        <TableCell>
-                            <div className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">{student.rank}</div>
+                </TableHeader>
+                <TableBody>
+                    {loading ? (
+                    [...Array(10)].map((_, i) => (
+                        <TableRow key={i}>
+                        <TableCell colSpan={sortableColumns.length}><Skeleton className="h-8" /></TableCell>
+                        </TableRow>
+                    ))
+                    ) : sortedData.length > 0 ? (
+                    sortedData.map((student, index) => (
+                        <TableRow key={student.student_no}>
+                            <TableCell>
+                                <div className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">{student.rank}</div>
+                            </TableCell>
+                            <TableCell className="font-medium">
+                                <div>{student.student_name}</div>
+                                <div className="text-xs text-muted-foreground">{student.student_no}</div>
+                            </TableCell>
+                            <TableCell>{student.class}</TableCell>
+                            <TableCell className="text-right">{student.toplam_net.toFixed(2)}</TableCell>
+                            <TableCell className="text-right font-semibold text-primary">{student.toplam_puan.toFixed(2)}</TableCell>
+                            <TableCell className="text-right">{student.turkce_net.toFixed(2)}</TableCell>
+                            <TableCell className="text-right">{student.mat_net.toFixed(2)}</TableCell>
+                            <TableCell className="text-right">{student.fen_net.toFixed(2)}</TableCell>
+                            <TableCell className="text-right">{student.tarih_net.toFixed(2)}</TableCell>
+                            <TableCell className="text-right">{student.din_net.toFixed(2)}</TableCell>
+                            <TableCell className="text-right">{student.ing_net.toFixed(2)}</TableCell>
+                        </TableRow>
+                    ))
+                    ) : (
+                    <TableRow>
+                        <TableCell colSpan={sortableColumns.length} className="h-24 text-center">
+                        Sıralama için veri bulunamadı. Lütfen bir deneme seçin.
                         </TableCell>
-                        <TableCell className="font-medium">
-                            <div>{student.student_name}</div>
-                            <div className="text-xs text-muted-foreground">{student.student_no}</div>
-                        </TableCell>
-                        <TableCell>{student.class}</TableCell>
-                        <TableCell className="text-right">{student.toplam_net.toFixed(2)}</TableCell>
-                        <TableCell className="text-right font-semibold text-primary">{student.toplam_puan.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">{student.turkce_net.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">{student.mat_net.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">{student.fen_net.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">{student.tarih_net.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">{student.din_net.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">{student.ing_net.toFixed(2)}</TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={sortableColumns.length} className="h-24 text-center">
-                      Sıralama için veri bulunamadı. Lütfen bir deneme seçin.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                    )}
+                </TableBody>
+                </Table>
+            </div>
           </div>
         </CardContent>
       </Card>

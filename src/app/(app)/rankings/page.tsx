@@ -8,23 +8,23 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { StudentExamResult } from '@/types';
 
-type SortKey = keyof typeof sortableColumns;
+type SortKey = keyof StudentExamResult | 'rank';
 
-const sortableColumns = {
-  rank: 'Sıra',
-  student_no: 'No',
-  student_name: 'Ad Soyad',
-  class: 'Sınıf',
-  toplam_puan: 'Toplam Puan',
-  toplam_net: 'Toplam Net',
-  turkce_net: 'Türkçe',
-  mat_net: 'Matematik',
-  fen_net: 'Fen',
-  tarih_net: 'Tarih',
-  din_net: 'Din Kültürü',
-  ing_net: 'İngilizce',
-};
+const sortableColumns: { key: SortKey, label: string }[] = [
+  { key: 'rank', label: 'Sıra' },
+  { key: 'student_name', label: 'Öğrenci' },
+  { key: 'class', label: 'Sınıf' },
+  { key: 'toplam_net', label: 'Toplam Net' },
+  { key: 'toplam_puan', label: 'Toplam Puan' },
+  { key: 'turkce_net', label: 'Türkçe' },
+  { key: 'mat_net', label: 'Matematik' },
+  { key: 'fen_net', label: 'Fen Bilimleri' },
+  { key: 'tarih_net', label: 'T.C. İnkılap Tarihi' },
+  { key: 'din_net', label: 'Din Kültürü' },
+  { key: 'ing_net', label: 'İngilizce' },
+];
 
 export default function RankingsPage() {
   const { studentData, selectedExam, loading } = useData();
@@ -34,20 +34,46 @@ export default function RankingsPage() {
     const examData = studentData.filter(d => d.exam_name === selectedExam);
     if (examData.length === 0) return [];
 
-    const sorted = [...examData].sort((a, b) => {
-      const aValue = a[sortConfig.key] || 0;
-      const bValue = b[sortConfig.key] || 0;
+    let sortableItems = [...examData];
 
-      if (aValue < bValue) {
-        return sortConfig.direction === 'ascending' ? -1 : 1;
-      }
-      if (aValue > bValue) {
-        return sortConfig.direction === 'ascending' ? 1 : -1;
-      }
-      return 0;
-    });
+    if (sortConfig.key !== 'rank' && sortConfig.key !== 'student_name' && sortConfig.key !== 'class') {
+      sortableItems.sort((a, b) => {
+        const aValue = a[sortConfig.key as keyof StudentExamResult] as number || 0;
+        const bValue = b[sortConfig.key as keyof StudentExamResult] as number || 0;
 
-    return sorted.map((item, index) => ({ ...item, rank: index + 1 }));
+        if (aValue < bValue) {
+          return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        // If scores are equal, sort by name
+        return a.student_name.localeCompare(b.student_name);
+      });
+    }
+    
+    // Add rank after sorting by a numeric value
+    let rankedData = sortableItems.map((item, index) => ({ ...item, rank: index + 1 }));
+
+    // Now, if sorting by rank, class, or name, apply it
+    if (sortConfig.key === 'rank' || sortConfig.key === 'class' || sortConfig.key === 'student_name') {
+        rankedData.sort((a,b) => {
+            const aValue = a[sortConfig.key];
+            const bValue = b[sortConfig.key];
+            let comparison = 0;
+            if (typeof aValue === 'string' && typeof bValue === 'string') {
+                comparison = aValue.localeCompare(bValue);
+            } else if (typeof aValue === 'number' && typeof bValue === 'number') {
+                if (aValue < bValue) comparison = -1;
+                if (aValue > bValue) comparison = 1;
+            }
+
+            return sortConfig.direction === 'ascending' ? comparison : -comparison;
+        });
+    }
+    
+    return rankedData;
+
   }, [studentData, selectedExam, sortConfig]);
 
   const requestSort = (key: SortKey) => {
@@ -58,63 +84,63 @@ export default function RankingsPage() {
     setSortConfig({ key, direction });
   };
 
-  const renderSortableHeader = (key: SortKey) => (
-    <Button variant="ghost" onClick={() => requestSort(key)} className="px-2">
-      {sortableColumns[key]}
-      <ArrowUpDown className="ml-2 h-4 w-4" />
-    </Button>
+  const renderSortableHeader = (column: { key: SortKey, label: string }) => (
+    <TableHead 
+        key={column.key}
+        className={column.key.toString().includes('net') || column.key.toString().includes('puan') ? "text-right" : ""}
+    >
+        <Button variant="ghost" onClick={() => requestSort(column.key)} className="px-2">
+            {column.label}
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+    </TableHead>
   );
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Sıralamalar" description={`"${selectedExam}" denemesi için öğrenci sıralamaları.`} />
+      <PageHeader title="Sıralamalar" description={selectedExam ? `"${selectedExam}" denemesi sıralaması` : "Genel sıralamalar"} />
 
       <Card>
         <CardContent className="pt-6">
           <div className="relative w-full overflow-auto rounded-md border">
             <Table>
-              <TableHeader className="sticky top-0 bg-background z-10">
+              <TableHeader>
                 <TableRow>
-                  <TableHead className="sticky left-0 bg-background z-20 min-w-[80px]">{renderSortableHeader('rank')}</TableHead>
-                  <TableHead className="sticky left-[80px] bg-background z-20 min-w-[150px]">{renderSortableHeader('student_name')}</TableHead>
-                  <TableHead>{renderSortableHeader('class')}</TableHead>
-                  <TableHead className="text-right">{renderSortableHeader('toplam_puan')}</TableHead>
-                  <TableHead className="text-right">{renderSortableHeader('toplam_net')}</TableHead>
-                  <TableHead className="text-right">{renderSortableHeader('turkce_net')}</TableHead>
-                  <TableHead className="text-right">{renderSortableHeader('mat_net')}</TableHead>
-                  <TableHead className="text-right">{renderSortableHeader('fen_net')}</TableHead>
-                  <TableHead className="text-right">{renderSortableHeader('tarih_net')}</TableHead>
-                  <TableHead className="text-right">{renderSortableHeader('din_net')}</TableHead>
-                  <TableHead className="text-right">{renderSortableHeader('ing_net')}</TableHead>
+                    {sortableColumns.map(col => renderSortableHeader(col))}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   [...Array(10)].map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell colSpan={11}><Skeleton className="h-6" /></TableCell>
+                      <TableCell colSpan={sortableColumns.length}><Skeleton className="h-8" /></TableCell>
                     </TableRow>
                   ))
                 ) : sortedData.length > 0 ? (
-                  sortedData.map((student) => (
+                  sortedData.map((student, index) => (
                     <TableRow key={student.student_no}>
-                      <TableCell className="sticky left-0 bg-card z-10 font-medium">{student.rank}</TableCell>
-                      <TableCell className="sticky left-[80px] bg-card z-10 font-medium">{student.student_name}</TableCell>
-                      <TableCell>{student.class}</TableCell>
-                      <TableCell className="text-right font-semibold">{student.toplam_puan.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">{student.toplam_net.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">{student.turkce_net.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">{student.mat_net.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">{student.fen_net.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">{student.tarih_net.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">{student.din_net.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">{student.ing_net.toFixed(2)}</TableCell>
+                        <TableCell>
+                            <div className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">{student.rank}</div>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                            <div>{student.student_name}</div>
+                            <div className="text-xs text-muted-foreground">{student.student_no}</div>
+                        </TableCell>
+                        <TableCell>{student.class}</TableCell>
+                        <TableCell className="text-right">{student.toplam_net.toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-semibold text-primary">{student.toplam_puan.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">{student.turkce_net.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">{student.mat_net.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">{student.fen_net.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">{student.tarih_net.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">{student.din_net.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">{student.ing_net.toFixed(2)}</TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={11} className="h-24 text-center">
-                      Sıralama için veri bulunamadı.
+                    <TableCell colSpan={sortableColumns.length} className="h-24 text-center">
+                      Sıralama için veri bulunamadı. Lütfen bir deneme seçin.
                     </TableCell>
                   </TableRow>
                 )}

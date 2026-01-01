@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -12,9 +12,12 @@ import { StudentExamResult } from '@/types';
 import { UploadCloud, File, X, Loader2 } from 'lucide-react';
 import { analyzeEokulData } from '@/ai/flows/analyze-eokul-data';
 import { Textarea } from '@/components/ui/textarea';
+import * as pdfjsLib from 'pdfjs-dist';
 
-// Dynamically import pdfjs-dist to avoid SSR issues
-const pdfjsPromise = import('pdfjs-dist');
+// Set worker source
+if (typeof window !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+}
 
 
 export default function UploadPage() {
@@ -23,12 +26,6 @@ export default function UploadPage() {
   const [pdfAnalysis, setPdfAnalysis] = useState('');
   const { toast } = useToast();
   const { addStudentData } = useData();
-
-  useEffect(() => {
-    pdfjsPromise.then(pdfjs => {
-      pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
-    });
-  }, []);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     setFiles(prev => [...prev, ...acceptedFiles]);
@@ -111,8 +108,7 @@ export default function UploadPage() {
 
   const processPdf = async (file: File) => {
       try {
-        const pdfjs = await pdfjsPromise;
-        const pdf = await pdfjs.getDocument(URL.createObjectURL(file)).promise;
+        const pdf = await pdfjsLib.getDocument(URL.createObjectURL(file)).promise;
         let textContent = '';
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);

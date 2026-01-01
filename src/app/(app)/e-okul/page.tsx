@@ -1,33 +1,30 @@
 "use client";
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { PageHeader } from '@/components/page-header';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { UploadCloud, File, X, Loader2, Home, AlertTriangle, LogIn, Database } from 'lucide-react';
+import { UploadCloud, File, X, Loader2, LogIn, Database, AlertTriangle } from 'lucide-react';
 import { analyzeEokulData } from '@/ai/flows/analyze-eokul-data';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import * as pdfjsLib from 'pdfjs-dist';
 
-// Dynamically import pdfjs-dist to avoid SSR issues
-const pdfjsPromise = import('pdfjs-dist');
+// Set worker source
+if (typeof window !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+}
 
 export default function EOkulPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [pdfAnalysis, setPdfAnalysis] = useState('');
   const { toast } = useToast();
-
-  useEffect(() => {
-    pdfjsPromise.then(pdfjs => {
-      pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
-    });
-  }, []);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     // Allow only one file at a time
@@ -63,16 +60,13 @@ export default function EOkulPage() {
 
     try {
         if (file.name.endsWith('.pdf')) {
-            const pdfjs = await pdfjsPromise;
-            const pdf = await pdfjs.getDocument(URL.createObjectURL(file)).promise;
+            const pdf = await pdfjsLib.getDocument(URL.createObjectURL(file)).promise;
             for (let i = 1; i <= pdf.numPages; i++) {
                 const page = await pdf.getPage(i);
                 const text = await page.getTextContent();
                 textContent += text.items.map(item => ('str' in item ? item.str : '')).join(' ');
             }
         } else if (file.name.endsWith('.html') || file.name.endsWith('.htm') || file.name.endsWith('.xlsx')) {
-            // For HTML and Excel, we'll just read as text for the AI.
-            // A more sophisticated Excel parsing could be added if needed.
              textContent = await file.text();
         } else {
             throw new Error("Desteklenmeyen dosya formatı.");

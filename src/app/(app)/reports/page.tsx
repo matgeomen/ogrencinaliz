@@ -14,6 +14,8 @@ import { cn } from '@/lib/utils';
 import { analyzeStudentReport, AnalyzeStudentReportOutput } from '@/ai/flows/analyze-student-report-flow';
 import { analyzeClassReport, AnalyzeClassReportOutput } from '@/ai/flows/analyze-class-report-flow';
 import { useToast } from '@/hooks/use-toast';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const getStatus = (score: number): { label: string; variant: "default" | "secondary" | "destructive" | "outline" } => {
     if (score >= 400) return { label: 'Çok İyi', variant: 'default' };
@@ -22,11 +24,55 @@ const getStatus = (score: number): { label: string; variant: "default" | "second
     return { label: 'Zayıf', variant: 'destructive' };
 };
 
+const handleDownloadPdf = async (reportId: string, fileName: string) => {
+    const input = document.getElementById(reportId);
+    if (!input) {
+      console.error('Element not found!');
+      return;
+    }
+
+    try {
+        const canvas = await html2canvas(input, {
+            scale: 2, // Higher scale for better quality
+            useCORS: true,
+            logging: false,
+        });
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+        const ratio = canvasWidth / canvasHeight;
+        const width = pdfWidth;
+        const height = width / ratio;
+        
+        let position = 0;
+        let heightLeft = height;
+
+        pdf.addImage(imgData, 'PNG', 0, position, width, height);
+        heightLeft -= pdfHeight;
+
+        while (heightLeft > 0) {
+            position = heightLeft - height;
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', 0, position, width, height);
+            heightLeft -= pdfHeight;
+        }
+        
+        pdf.save(`${fileName}.pdf`);
+    } catch (error) {
+        console.error("Could not generate PDF", error);
+    }
+};
+
+
 function StudentReport() {
     const { studentData, classes } = useData();
     const [selectedClass, setSelectedClass] = useState<string>('');
     const [selectedStudentNo, setSelectedStudentNo] = useState<string>('');
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false);
     const [aiAnalysis, setAiAnalysis] = useState<AnalyzeStudentReportOutput | null>(null);
     const { toast } = useToast();
     
@@ -80,6 +126,12 @@ function StudentReport() {
         setAiAnalysis(null);
     }
 
+    const onDownload = async () => {
+        setIsDownloading(true);
+        await handleDownloadPdf('student-report-content', `${selectedStudentName}-rapor`);
+        setIsDownloading(false);
+    }
+
     return (
         <div className="report-section">
             <Card className="no-print">
@@ -111,112 +163,114 @@ function StudentReport() {
                     <p>AI Raporu oluşturuluyor...</p>
                 </div>
             )}
-
-            {aiAnalysis && (
-                 <div className="mt-6 space-y-6 print-container">
-                     <Card>
-                        <CardHeader>
-                            <div className="flex justify-between items-center">
-                                <CardTitle>{selectedStudentName} - AI Değerlendirme Raporu</CardTitle>
-                                <Button variant="outline" size="sm" onClick={() => window.print()} className="no-print">
-                                    <Printer className="mr-2 h-4 w-4" />
-                                    Yazdır
-                                </Button>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            <p className="text-sm text-muted-foreground">{aiAnalysis.summary}</p>
-                            
-                            <div className="grid md:grid-cols-2 gap-6">
-                                <Card className="border-green-200 bg-green-50/50 dark:bg-green-900/20 dark:border-green-800">
-                                    <CardHeader>
-                                        <CardTitle className="text-base font-semibold flex items-center gap-2 text-green-800 dark:text-green-300">
-                                            <Lightbulb className="h-5 w-5"/>
-                                            Güçlü Yönler
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <ul className="space-y-2 text-sm text-green-900 dark:text-green-200">
-                                            {aiAnalysis.strengths.map((item, index) => (
-                                                <li key={index} className="flex items-start gap-2">
-                                                    <CheckCircle className="h-4 w-4 mt-0.5 text-green-600 shrink-0"/>
-                                                    <span>{item}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </CardContent>
-                                </Card>
-                                <Card className="border-orange-200 bg-orange-50/50 dark:bg-orange-900/20 dark:border-orange-800">
-                                    <CardHeader>
-                                        <CardTitle className="text-base font-semibold flex items-center gap-2 text-orange-800 dark:text-orange-300">
-                                            <TrendingDown className="h-5 w-5"/>
-                                            Geliştirilmesi Gerekenler
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <ul className="space-y-2 text-sm text-orange-900 dark:text-orange-200">
-                                            {aiAnalysis.areasForImprovement.map((item, index) => (
-                                                <li key={index} className="flex items-start gap-2">
-                                                    <TrendingDown className="h-4 w-4 mt-0.5 text-orange-600 shrink-0"/>
-                                                    <span>{item}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </CardContent>
-                                </Card>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {aiAnalysis.roadmap && aiAnalysis.roadmap.length > 0 && (
+            
+            <div id="student-report-content">
+                {aiAnalysis && (
+                    <div className="mt-6 space-y-6 print-container">
                         <Card>
                             <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Route className="h-5 w-5 text-primary"/>
-                                    Yol Haritası
-                                </CardTitle>
+                                <div className="flex justify-between items-center">
+                                    <CardTitle>{selectedStudentName} - AI Değerlendirme Raporu</CardTitle>
+                                    <Button variant="outline" size="sm" onClick={onDownload} disabled={isDownloading} className="no-print">
+                                        {isDownloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
+                                        İndir
+                                    </Button>
+                                </div>
                             </CardHeader>
-                            <CardContent>
-                                <div className="space-y-4">
-                                    {aiAnalysis.roadmap.map((item, index) => (
-                                        <div key={index} className="flex items-start gap-4 p-3 bg-secondary/50 rounded-lg">
-                                            <div className="flex-shrink-0 bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">{index + 1}</div>
-                                            <div>
-                                                <p className="font-semibold">{item.title}</p>
-                                                <p className="text-sm text-muted-foreground">{item.description}</p>
-                                            </div>
-                                        </div>
-                                    ))}
+                            <CardContent className="space-y-6">
+                                <p className="text-sm text-muted-foreground">{aiAnalysis.summary}</p>
+                                
+                                <div className="grid md:grid-cols-2 gap-6">
+                                    <Card className="border-green-200 bg-green-50/50 dark:bg-green-900/20 dark:border-green-800">
+                                        <CardHeader>
+                                            <CardTitle className="text-base font-semibold flex items-center gap-2 text-green-800 dark:text-green-300">
+                                                <Lightbulb className="h-5 w-5"/>
+                                                Güçlü Yönler
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <ul className="space-y-2 text-sm text-green-900 dark:text-green-200">
+                                                {aiAnalysis.strengths.map((item, index) => (
+                                                    <li key={index} className="flex items-start gap-2">
+                                                        <CheckCircle className="h-4 w-4 mt-0.5 text-green-600 shrink-0"/>
+                                                        <span>{item}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </CardContent>
+                                    </Card>
+                                    <Card className="border-orange-200 bg-orange-50/50 dark:bg-orange-900/20 dark:border-orange-800">
+                                        <CardHeader>
+                                            <CardTitle className="text-base font-semibold flex items-center gap-2 text-orange-800 dark:text-orange-300">
+                                                <TrendingDown className="h-5 w-5"/>
+                                                Geliştirilmesi Gerekenler
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <ul className="space-y-2 text-sm text-orange-900 dark:text-orange-200">
+                                                {aiAnalysis.areasForImprovement.map((item, index) => (
+                                                    <li key={index} className="flex items-start gap-2">
+                                                        <TrendingDown className="h-4 w-4 mt-0.5 text-orange-600 shrink-0"/>
+                                                        <span>{item}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </CardContent>
+                                    </Card>
                                 </div>
                             </CardContent>
                         </Card>
-                    )}
 
-                    {aiAnalysis.recommendations && aiAnalysis.recommendations.length > 0 && (
-                         <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <GraduationCap className="h-5 w-5 text-primary"/>
-                                    Öneriler
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-4">
-                                    {aiAnalysis.recommendations.map((item, index) => (
-                                        <div key={index} className="flex items-start gap-3 p-3 bg-secondary/50 rounded-lg">
-                                             <Lightbulb className="h-5 w-5 mt-1 text-yellow-500 shrink-0"/>
-                                            <div>
-                                                <p className="font-semibold">{item.title}</p>
-                                                <p className="text-sm text-muted-foreground">{item.description}</p>
+                        {aiAnalysis.roadmap && aiAnalysis.roadmap.length > 0 && (
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <Route className="h-5 w-5 text-primary"/>
+                                        Yol Haritası
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="space-y-4">
+                                        {aiAnalysis.roadmap.map((item, index) => (
+                                            <div key={index} className="flex items-start gap-4 p-3 bg-secondary/50 rounded-lg">
+                                                <div className="flex-shrink-0 bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">{index + 1}</div>
+                                                <div>
+                                                    <p className="font-semibold">{item.title}</p>
+                                                    <p className="text-sm text-muted-foreground">{item.description}</p>
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </CardContent>
-                        </Card>
-                    )}
-                 </div>
-            )}
+                                        ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
+
+                        {aiAnalysis.recommendations && aiAnalysis.recommendations.length > 0 && (
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <GraduationCap className="h-5 w-5 text-primary"/>
+                                        Öneriler
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="space-y-4">
+                                        {aiAnalysis.recommendations.map((item, index) => (
+                                            <div key={index} className="flex items-start gap-3 p-3 bg-secondary/50 rounded-lg">
+                                                <Lightbulb className="h-5 w-5 mt-1 text-yellow-500 shrink-0"/>
+                                                <div>
+                                                    <p className="font-semibold">{item.title}</p>
+                                                    <p className="text-sm text-muted-foreground">{item.description}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
+                    </div>
+                )}
+            </div>
 
             {selectedStudentResults.length > 0 && !aiAnalysis && !isGenerating && (
                  <Card className="mt-6">
@@ -280,6 +334,7 @@ function ClassReport() {
     const [selectedClass, setSelectedClass] = useState<string>('');
     const [selectedExam, setSelectedExam] = useState<string>('all');
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false);
     const [aiAnalysis, setAiAnalysis] = useState<AnalyzeClassReportOutput | null>(null);
     const { toast } = useToast();
 
@@ -327,6 +382,13 @@ function ClassReport() {
         setAiAnalysis(null);
     }
 
+    const onDownload = async () => {
+        setIsDownloading(true);
+        const examName = selectedExam === 'all' ? 'tum-denemeler' : selectedExam.replace(/\s+/g, '-').toLowerCase();
+        await handleDownloadPdf('class-report-content', `${selectedClass}-sinifi-${examName}-rapor`);
+        setIsDownloading(false);
+    }
+
     return (
          <div className="report-section">
             <Card className="no-print">
@@ -359,115 +421,116 @@ function ClassReport() {
                     <p>AI Sınıf Raporu oluşturuluyor...</p>
                 </div>
             )}
-
-            {aiAnalysis && (
-                 <div className="mt-6 space-y-6 print-container">
-                     <Card>
-                        <CardHeader>
-                            <div className="flex justify-between items-center">
-                                <CardTitle>{selectedClass} Sınıfı - AI Raporu</CardTitle>
-                                <Button variant="outline" size="sm" onClick={() => window.print()} className="no-print">
-                                    <Printer className="mr-2 h-4 w-4" />
-                                    Yazdır
-                                </Button>
-                            </div>
-                             <CardDescription>{selectedExam === 'all' ? "Tüm Denemeler" : selectedExam}</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div className='p-4 bg-secondary/50 rounded-lg'>
-                                <h3 className='font-semibold flex items-center gap-2 mb-2'><BrainCircuit className='h-5 w-5 text-primary' /> Genel Değerlendirme</h3>
-                                <p className="text-sm text-muted-foreground">{aiAnalysis.summary}</p>
-                            </div>
-                            
-                            <div className="grid md:grid-cols-2 gap-6">
-                                <Card className="border-green-200 bg-green-50/50 dark:bg-green-900/20 dark:border-green-800">
-                                    <CardHeader>
-                                        <CardTitle className="text-base font-semibold flex items-center gap-2 text-green-800 dark:text-green-300">
-                                            <Lightbulb className="h-5 w-5"/>
-                                            Güçlü Yönler
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <ul className="space-y-2 text-sm text-green-900 dark:text-green-200">
-                                            {aiAnalysis.strengths.map((item, index) => (
-                                                <li key={index} className="flex items-start gap-2">
-                                                    <CheckCircle className="h-4 w-4 mt-0.5 text-green-600 shrink-0"/>
-                                                    <span>{item}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </CardContent>
-                                </Card>
-                                <Card className="border-orange-200 bg-orange-50/50 dark:bg-orange-900/20 dark:border-orange-800">
-                                    <CardHeader>
-                                        <CardTitle className="text-base font-semibold flex items-center gap-2 text-orange-800 dark:text-orange-300">
-                                            <TrendingDown className="h-5 w-5"/>
-                                            Geliştirilmesi Gerekenler
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <ul className="space-y-2 text-sm text-orange-900 dark:text-orange-200">
-                                            {aiAnalysis.areasForImprovement.map((item, index) => (
-                                                <li key={index} className="flex items-start gap-2">
-                                                    <TrendingDown className="h-4 w-4 mt-0.5 text-orange-600 shrink-0"/>
-                                                    <span>{item}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </CardContent>
-                                </Card>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {aiAnalysis.roadmap && aiAnalysis.roadmap.length > 0 && (
+            <div id="class-report-content">
+                {aiAnalysis && (
+                    <div className="mt-6 space-y-6 print-container">
                         <Card>
                             <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Route className="h-5 w-5 text-primary"/>
-                                    Yol Haritası
-                                </CardTitle>
+                                <div className="flex justify-between items-center">
+                                    <CardTitle>{selectedClass} Sınıfı - AI Raporu</CardTitle>
+                                    <Button variant="outline" size="sm" onClick={onDownload} disabled={isDownloading} className="no-print">
+                                        {isDownloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
+                                        İndir
+                                    </Button>
+                                </div>
+                                <CardDescription>{selectedExam === 'all' ? "Tüm Denemeler" : selectedExam}</CardDescription>
                             </CardHeader>
-                            <CardContent>
-                                <div className="space-y-4">
-                                    {aiAnalysis.roadmap.map((item, index) => (
-                                        <div key={index} className="flex items-start gap-4 p-3 bg-secondary/50 rounded-lg">
-                                            <div className="flex-shrink-0 bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">{index + 1}</div>
-                                            <div>
-                                                <p className="font-semibold">{item.title}</p>
-                                                <p className="text-sm text-muted-foreground">{item.description}</p>
-                                            </div>
-                                        </div>
-                                    ))}
+                            <CardContent className="space-y-6">
+                                <div className='p-4 bg-secondary/50 rounded-lg'>
+                                    <h3 className='font-semibold flex items-center gap-2 mb-2'><BrainCircuit className='h-5 w-5 text-primary' /> Genel Değerlendirme</h3>
+                                    <p className="text-sm text-muted-foreground">{aiAnalysis.summary}</p>
+                                </div>
+                                
+                                <div className="grid md:grid-cols-2 gap-6">
+                                    <Card className="border-green-200 bg-green-50/50 dark:bg-green-900/20 dark:border-green-800">
+                                        <CardHeader>
+                                            <CardTitle className="text-base font-semibold flex items-center gap-2 text-green-800 dark:text-green-300">
+                                                <Lightbulb className="h-5 w-5"/>
+                                                Güçlü Yönler
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <ul className="space-y-2 text-sm text-green-900 dark:text-green-200">
+                                                {aiAnalysis.strengths.map((item, index) => (
+                                                    <li key={index} className="flex items-start gap-2">
+                                                        <CheckCircle className="h-4 w-4 mt-0.5 text-green-600 shrink-0"/>
+                                                        <span>{item}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </CardContent>
+                                    </Card>
+                                    <Card className="border-orange-200 bg-orange-50/50 dark:bg-orange-900/20 dark:border-orange-800">
+                                        <CardHeader>
+                                            <CardTitle className="text-base font-semibold flex items-center gap-2 text-orange-800 dark:text-orange-300">
+                                                <TrendingDown className="h-5 w-5"/>
+                                                Geliştirilmesi Gerekenler
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <ul className="space-y-2 text-sm text-orange-900 dark:text-orange-200">
+                                                {aiAnalysis.areasForImprovement.map((item, index) => (
+                                                    <li key={index} className="flex items-start gap-2">
+                                                        <TrendingDown className="h-4 w-4 mt-0.5 text-orange-600 shrink-0"/>
+                                                        <span>{item}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </CardContent>
+                                    </Card>
                                 </div>
                             </CardContent>
                         </Card>
-                    )}
-                    {aiAnalysis.recommendations && aiAnalysis.recommendations.length > 0 && (
-                         <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <GraduationCap className="h-5 w-5 text-primary"/>
-                                    Öneriler
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-4">
-                                    {aiAnalysis.recommendations.map((item, index) => (
-                                        <div key={index} className="flex items-start gap-3 p-3 bg-secondary/50 rounded-lg">
-                                             <Lightbulb className="h-5 w-5 mt-1 text-yellow-500 shrink-0"/>
-                                            <div>
-                                                <p className="font-semibold">{item.title}</p>
-                                                <p className="text-sm text-muted-foreground">{item.description}</p>
+
+                        {aiAnalysis.roadmap && aiAnalysis.roadmap.length > 0 && (
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <Route className="h-5 w-5 text-primary"/>
+                                        Yol Haritası
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="space-y-4">
+                                        {aiAnalysis.roadmap.map((item, index) => (
+                                            <div key={index} className="flex items-start gap-4 p-3 bg-secondary/50 rounded-lg">
+                                                <div className="flex-shrink-0 bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">{index + 1}</div>
+                                                <div>
+                                                    <p className="font-semibold">{item.title}</p>
+                                                    <p className="text-sm text-muted-foreground">{item.description}</p>
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </CardContent>
-                        </Card>
-                    )}
-                 </div>
-            )}
+                                        ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
+                        {aiAnalysis.recommendations && aiAnalysis.recommendations.length > 0 && (
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <GraduationCap className="h-5 w-5 text-primary"/>
+                                        Öneriler
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="space-y-4">
+                                        {aiAnalysis.recommendations.map((item, index) => (
+                                            <div key={index} className="flex items-start gap-3 p-3 bg-secondary/50 rounded-lg">
+                                                <Lightbulb className="h-5 w-5 mt-1 text-yellow-500 shrink-0"/>
+                                                <div>
+                                                    <p className="font-semibold">{item.title}</p>
+                                                    <p className="text-sm text-muted-foreground">{item.description}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

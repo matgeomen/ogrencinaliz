@@ -38,7 +38,8 @@ const AnalyzeClassReportInputSchema = z.object({
 export type AnalyzeClassReportInput = z.infer<typeof AnalyzeClassReportInputSchema>;
 
 const AnalyzeClassReportOutputSchema = z.object({
-  analysis: z.string().describe("Sınıfın genel performansını, güçlü ve zayıf yönlerini, potansiyelini ve gelişim için önerileri içeren bütüncül bir analiz metni. Metin, paragraflar halinde yapılandırılmalıdır."),
+  strengths: z.array(z.string()).describe("Sınıfın bir bütün olarak başarılı olduğu, ortalamalarının yüksek olduğu dersleri veya konuları vurgulayan 3-4 madde. Her madde **Başlık:** Açıklama formatında olmalıdır."),
+  areasForImprovement: z.array(z.string()).describe("Sınıfın genel olarak zorlandığı, net ortalamalarının düşük olduğu dersleri veya konuları tespit eden 3-4 madde. Her madde **Başlık:** Açıklama formatında olmalıdır."),
 });
 export type AnalyzeClassReportOutput = z.infer<
   typeof AnalyzeClassReportOutputSchema
@@ -83,7 +84,7 @@ export async function analyzeClassReport(
             studentAverages[student_no].fen_net /= count;
             studentAverages[student_no].tarih_net /= count;
             studentAverages[student_no].din_net /= count;
-            studentAverages[r.student_no].ing_net /= count;
+            studentAverages[student_no].ing_net /= count;
           }
       });
       analyzedResults = Object.values(studentAverages);
@@ -127,13 +128,14 @@ const prompt = ai.definePrompt({
   output: {schema: AnalyzeClassReportOutputSchema},
   prompt: `Sen LGS konusunda uzman bir eğitim danışmanısın. Sana verilen sınıf bilgilerini ve deneme sınavı sonuçları özetini analiz ederek sınıfın genel durumu hakkında detaylı ve bütüncül bir rapor hazırla.
 
-Raporu, birkaç paragraflık akıcı bir metin olarak yaz. Analizinde şu noktalara değin:
-1.  **Giriş ve Genel Değerlendirme:** Sana verdiğim özet metnini yorumlayarak başla. Sınıfın genel akademik performansını, deneme ortalamalarını ve genel potansiyelini değerlendir.
-2.  **Güçlü Yönler ve Başarılar:** Sınıfın bir bütün olarak başarılı olduğu, ortalamalarının yüksek olduğu dersleri veya konuları vurgula.
-3.  **Geliştirilmesi Gereken Alanlar:** Sınıfın genel olarak zorlandığı, net ortalamalarının düşük olduğu dersleri veya konuları tespit et. Özellikle LGS'de katsayısı yüksek olan derslerdeki (Matematik, Fen, Türkçe) genel duruma dikkat çek.
-4.  **Sonuç ve Öneriler:** Sınıfın kolektif performansını artırmak için somut ve uygulanabilir önerilerde bulun. Bu, genel bir strateji veya birkaç önemli tavsiye olabilir.
+Raporu iki ana başlık altında topla: "Güçlü Yönler" ve "Geliştirilmesi Gereken Alanlar". Her başlık için 3-4 maddelik listeler oluştur.
 
-Tüm metni profesyonel, yapıcı ve yol gösterici bir dille yaz. Analizini, sınıfın kolektif başarısını artırmaya yönelik içgörüler sunacak şekilde odakla. Raporun okunması kolay ve anlaşılır olmalı.
+- **strengths (Güçlü Yönler):** Sınıfın bir bütün olarak başarılı olduğu, ortalamalarının yüksek olduğu dersleri, genel potansiyelini veya gözlemlediğin olumlu eğilimleri vurgula.
+- **areasForImprovement (Geliştirilmesi Gereken Alanlar):** Sınıfın genel olarak zorlandığı, net ortalamalarının düşük olduğu dersleri veya LGS başarısı için kritik olan ama eksik görünen becerileri (örn: LGS tipi soru çözme, zaman yönetimi) tespit et.
+
+Her maddeyi "**Kalın Başlık:** Açıklama metni." formatında yaz.
+
+Tüm metni profesyonel, yapıcı ve yol gösterici bir dille yaz. Analizini, sınıfın kolektif başarısını artırmaya yönelik içgörüler sunacak şekilde odakla.
 
 Sınıf Bilgileri:
 - Sınıf Adı: {{{className}}}
@@ -142,7 +144,7 @@ Sınıf Bilgileri:
 Sınıf Özeti ve Ortalama Netler:
 {{{classSummary}}}
 
-Lütfen sadece 'analysis' alanını doldurarak bir JSON çıktısı üret.`,
+Lütfen sadece 'strengths' ve 'areasForImprovement' alanlarını doldurarak bir JSON çıktısı üret.`,
 });
 
 const analyzeClassReportFlow = ai.defineFlow(

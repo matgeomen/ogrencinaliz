@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, BrainCircuit, Lightbulb, TrendingDown, Route, CheckCircle, GraduationCap, Users, User, ChevronDown, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Loader2, BrainCircuit, Lightbulb, Route, GraduationCap, Users, User, ChevronDown, TrendingUp, AlertTriangle } from 'lucide-react';
 import { analyzeStudentReport, AnalyzeStudentReportOutput } from '@/ai/flows/analyze-student-report-flow';
 import { analyzeClassReport, AnalyzeClassReportOutput } from '@/ai/flows/analyze-class-report-flow';
 import { Label } from '@/components/ui/label';
@@ -153,24 +153,53 @@ export default function AiAnalysisPage() {
     }
 
     if (analysisType === 'class') {
-      const { analysis } = analysisResult as AnalyzeClassReportOutput;
+      const { strengths, areasForImprovement } = analysisResult as AnalyzeClassReportOutput;
       return (
-        <Card>
-          <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                  <BrainCircuit className="h-5 w-5 text-primary" />
-                  {selectedClass} Sınıfı - AI Değerlendirmesi
-              </CardTitle>
-              <CardDescription>{examNameForTitle}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-              {analysis.split('\n').map((paragraph, index) => (
-                  <p key={index} className="text-sm text-muted-foreground leading-relaxed">
-                      {paragraph}
-                  </p>
-              ))}
-          </CardContent>
-        </Card>
+         <div className="space-y-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Users className="h-6 w-6 text-primary" />
+                        {`${selectedClass} Sınıfı - AI Değerlendirmesi`}
+                    </CardTitle>
+                    <CardDescription>{examNameForTitle}</CardDescription>
+                </CardHeader>
+            </Card>
+            <div className="grid md:grid-cols-2 gap-6">
+                <Card className="border-green-200 bg-green-50/50 dark:bg-green-900/20 dark:border-green-800">
+                    <CardHeader><CardTitle className="text-base font-semibold flex items-center gap-2 text-green-800 dark:text-green-300"><TrendingUp className="h-5 w-5"/>Güçlü Yönler</CardTitle></CardHeader>
+                    <CardContent>
+                        <ul className="space-y-4 text-sm list-none text-green-900 dark:text-green-200">
+                            {strengths.map((item:string, index:number) => {
+                                const [title, ...description] = item.split(':');
+                                return (
+                                <li key={index} className="pl-2">
+                                    <p className="font-bold">{title}:</p>
+                                    <p className="text-muted-foreground">{description.join(':').trim()}</p>
+                                </li>
+                                )
+                            })}
+                        </ul>
+                    </CardContent>
+                </Card>
+                <Card className="border-orange-200 bg-orange-50/50 dark:bg-orange-900/20 dark:border-orange-800">
+                    <CardHeader><CardTitle className="text-base font-semibold flex items-center gap-2 text-orange-800 dark:text-orange-300"><AlertTriangle className="h-5 w-5"/>Geliştirilmesi Gerekenler</CardTitle></CardHeader>
+                    <CardContent>
+                        <ul className="space-y-4 text-sm list-none text-orange-900 dark:text-orange-200">
+                            {areasForImprovement.map((item:string, index:number) => {
+                                const [title, ...description] = item.split(':');
+                                return (
+                                <li key={index} className="pl-2">
+                                    <p className="font-bold">{title}:</p>
+                                    <p className="text-muted-foreground">{description.join(':').trim()}</p>
+                                </li>
+                                )
+                            })}
+                        </ul>
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
       );
     }
 
@@ -181,6 +210,7 @@ export default function AiAnalysisPage() {
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
+                        <User className="h-6 w-6 text-primary" />
                         {`${selectedStudentName} - AI Değerlendirmesi`}
                     </CardTitle>
                     <CardDescription>{examNameForTitle}</CardDescription>

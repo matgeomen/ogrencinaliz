@@ -13,32 +13,83 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { StudentExamResult } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { User } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 
 function StudentDetailModal({ student }: { student: StudentExamResult }) {
-  const lessonData = [
-    { name: 'Türkçe', net: student.turkce_net },
-    { name: 'Tarih', net: student.tarih_net },
-    { name: 'Din', net: student.din_net },
-    { name: 'İngilizce', net: student.ing_net },
-    { name: 'Matematik', net: student.mat_net },
-    { name: 'Fen', net: student.fen_net },
-  ];
+  const { studentData } = useData();
+
+  const studentAllResults = useMemo(() => {
+    return studentData
+      .filter(d => d.student_no === student.student_no)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [studentData, student.student_no]);
+
+  const selectedExamResult = studentAllResults.find(r => r.exam_name === student.exam_name);
+
+  const lessonData = selectedExamResult ? [
+    { name: 'Türkçe', net: selectedExamResult.turkce_net },
+    { name: 'Matematik', net: selectedExamResult.mat_net },
+    { name: 'Fen Bilimleri', net: selectedExamResult.fen_net },
+    { name: 'T.C. İnkılap Tarihi', net: selectedExamResult.tarih_net },
+    { name: 'Din Kültürü', net: selectedExamResult.din_net },
+    { name: 'İngilizce', net: selectedExamResult.ing_net },
+  ] : [];
+
   return (
-    <DialogContent className="sm:max-w-[625px]">
+    <DialogContent className="sm:max-w-3xl">
       <DialogHeader>
-        <DialogTitle>{student.student_name} - Ders Bazlı Netler</DialogTitle>
+        <div className="flex items-center gap-4">
+          <div className="bg-muted rounded-full p-2">
+            <User className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <DialogTitle className="text-2xl">{student.student_name}</DialogTitle>
+        </div>
+        <div className="grid grid-cols-3 gap-4 pt-4 text-center">
+            <div>
+                <p className="text-sm text-muted-foreground">Öğrenci No</p>
+                <p className="font-semibold">{student.student_no}</p>
+            </div>
+            <div>
+                <p className="text-sm text-muted-foreground">Sınıf</p>
+                <p className="font-semibold">{student.class}</p>
+            </div>
+            <div>
+                <p className="text-sm text-muted-foreground">Toplam Puan</p>
+                <p className="font-semibold text-primary">{student.toplam_puan.toFixed(2)}</p>
+            </div>
+        </div>
       </DialogHeader>
-      <div className="py-4">
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={lessonData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="net" fill="hsl(var(--primary))" name="Net Sayısı" />
-          </BarChart>
-        </ResponsiveContainer>
+      <div className="py-4 space-y-8">
+        <div>
+            <h3 className="font-semibold mb-4">Ders Bazlı Net Dağılımı ({student.exam_name})</h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={lessonData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="net" fill="hsl(var(--primary))" name="Net Sayısı" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+        </div>
+        <div>
+            <h3 className="font-semibold mb-4">Deneme Geçmişi</h3>
+            <div className="space-y-4">
+                {studentAllResults.map(result => (
+                    <div key={result.exam_name}>
+                        <div className="flex justify-between items-center">
+                            <p className="font-medium">{result.exam_name}</p>
+                            <div className="text-right">
+                                <p className="text-sm"><span className="text-muted-foreground">Net:</span> {result.toplam_net.toFixed(2)}</p>
+                                <p className="text-sm font-semibold"><span className="text-muted-foreground">Puan:</span> {result.toplam_puan.toFixed(2)}</p>
+                            </div>
+                        </div>
+                        <Separator className="mt-2" />
+                    </div>
+                ))}
+            </div>
+        </div>
       </div>
     </DialogContent>
   );
@@ -123,10 +174,10 @@ export default function StudentsPage() {
                           <TableCell className="text-right">{student.toplam_puan.toFixed(2)}</TableCell>
                           <TableCell className="text-center">
                             <Badge variant={status.variant} className={cn(
-                                status.label === 'Çok İyi' && 'bg-green-100 text-green-800 border-green-200',
-                                status.label === 'İyi' && 'bg-blue-100 text-blue-800 border-blue-200',
-                                status.label === 'Orta' && 'bg-yellow-100 text-yellow-800 border-yellow-200',
-                                status.label === 'Zayıf' && 'bg-red-100 text-red-800 border-red-200'
+                                status.label === 'Çok İyi' && 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200',
+                                status.label === 'İyi' && 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200',
+                                status.label === 'Orta' && 'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200',
+                                status.label === 'Zayıf' && 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200'
                             )}>{status.label}</Badge>
                           </TableCell>
                         </TableRow>

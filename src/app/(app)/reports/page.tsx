@@ -9,8 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { StudentExamResult } from '@/types';
-import { FileText, Users, Home, Loader2 } from 'lucide-react';
+import { FileText, Users, Home, Loader2, Printer, BrainCircuit } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { analyzeStudentReport } from '@/ai/flows/analyze-student-report-flow';
+import { useToast } from '@/hooks/use-toast';
 
 const getStatus = (score: number): { label: string; variant: "default" | "secondary" | "destructive" | "outline" } => {
     if (score >= 400) return { label: 'Çok İyi', variant: 'default' };
@@ -24,11 +26,14 @@ function StudentReport() {
     const [selectedClass, setSelectedClass] = useState<string>('');
     const [selectedStudentNo, setSelectedStudentNo] = useState<string>('');
     const [isGenerating, setIsGenerating] = useState(false);
+    const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
+    const { toast } = useToast();
     
     const studentsInClass = useMemo(() => {
         return studentData
             .filter(s => s.class === selectedClass)
-            .filter((s, i, arr) => arr.findIndex(t => t.student_no === s.student_no) === i);
+            .filter((s, i, arr) => arr.findIndex(t => t.student_no === s.student_no) === i)
+            .sort((a,b) => a.student_name.localeCompare(b.student_name));
     }, [studentData, selectedClass]);
     
     const selectedStudentResults = useMemo(() => {
@@ -38,32 +43,54 @@ function StudentReport() {
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [studentData, selectedStudentNo]);
 
-    const handleGenerate = () => {
-        if (!selectedStudentNo) {
-            alert("Lütfen bir öğrenci seçin.");
+    const handleGenerate = async () => {
+        if (!selectedStudentNo || selectedStudentResults.length === 0) {
+            toast({ title: "Lütfen bir öğrenci ve verisi olduğundan emin olun.", variant: 'destructive' });
             return;
         }
         setIsGenerating(true);
-        // Simulate report generation
-        setTimeout(() => {
+        setAiAnalysis(null);
+        
+        try {
+            const result = await analyzeStudentReport({
+                studentName: selectedStudentName || 'Bilinmeyen Öğrenci',
+                className: selectedClass,
+                examResults: selectedStudentResults,
+            });
+            setAiAnalysis(result.analysis);
+            toast({ title: "AI Raporu başarıyla oluşturuldu." });
+        } catch (error) {
+            console.error("AI Analysis Error:", error);
+            toast({ title: "Rapor oluşturulurken bir hata oluştu.", variant: 'destructive' });
+        } finally {
             setIsGenerating(false);
-        }, 1500);
+        }
     }
     
     const selectedStudentName = studentsInClass.find(s => s.student_no.toString() === selectedStudentNo)?.student_name;
+
+    const handleClassChange = (c: string) => {
+        setSelectedClass(c);
+        setSelectedStudentNo('');
+        setAiAnalysis(null);
+    }
+    const handleStudentChange = (studentNo: string) => {
+        setSelectedStudentNo(studentNo);
+        setAiAnalysis(null);
+    }
 
     return (
         <div>
             <Card>
                 <CardContent className="p-4 flex flex-col sm:flex-row gap-4">
-                    <Select value={selectedClass} onValueChange={c => { setSelectedClass(c); setSelectedStudentNo(''); }}>
+                    <Select value={selectedClass} onValueChange={handleClassChange}>
                         <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Sınıf Seçin"/></SelectTrigger>
                         <SelectContent>
                         {classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                         </SelectContent>
                     </Select>
                     
-                    <Select value={selectedStudentNo} onValueChange={setSelectedStudentNo} disabled={!selectedClass}>
+                    <Select value={selectedStudentNo} onValueChange={handleStudentChange} disabled={!selectedClass}>
                         <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Öğrenci Seçin"/></SelectTrigger>
                         <SelectContent>
                         {studentsInClass.map(s => <SelectItem key={s.student_no} value={s.student_no.toString()}>{s.student_name}</SelectItem>)}
@@ -71,8 +98,8 @@ function StudentReport() {
                     </Select>
                     
                     <Button onClick={handleGenerate} disabled={isGenerating || !selectedStudentNo} className="w-full sm:w-auto">
-                        {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Oluştur
+                        {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BrainCircuit className="mr-2 h-4 w-4" />}
+                        Rapor Oluştur
                     </Button>
                 </CardContent>
             </Card>
@@ -129,6 +156,26 @@ function StudentReport() {
                         </div>
                     </CardContent>
                  </Card>
+            )}
+
+            {aiAnalysis && (
+                <Card className="mt-6">
+                    <CardHeader>
+                        <div className="flex justify-between items-center">
+                            <CardTitle>{selectedStudentName} - AI Raporu</CardTitle>
+                            <Button variant="outline" size="sm" onClick={() => window.print()}>
+                                <Printer className="mr-2 h-4 w-4" />
+                                Yazdır
+                            </Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="p-4 bg-muted/50 rounded-lg">
+                           <h4 className="font-semibold mb-2">Genel Değerlendirme</h4>
+                           <p className="text-sm text-muted-foreground whitespace-pre-wrap">{aiAnalysis}</p>
+                        </div>
+                    </CardContent>
+                </Card>
             )}
         </div>
     );
@@ -190,3 +237,5 @@ export default function ReportsPage() {
     </div>
   );
 }
+
+    

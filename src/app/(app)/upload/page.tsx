@@ -108,7 +108,8 @@ export default function UploadPage() {
 
   const processPdf = async (file: File) => {
       try {
-        const pdf = await pdfjsLib.getDocument(URL.createObjectURL(file)).promise;
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
         let textContent = '';
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);

@@ -41,6 +41,10 @@ const AnalyzeClassReportOutputSchema = z.object({
   summary: z.string().describe('Sınıfın genel performansını, ortalamalarını ve potansiyelini özetleyen bir giriş paragrafı.'),
   strengths: z.array(z.string()).describe('Sınıfın genel olarak güçlü olduğu yönleri ve dersleri listeleyen maddeler.'),
   areasForImprovement: z.array(z.string()).describe('Sınıfın genel olarak gelişmesi gereken alanları ve dersleri listeleyen maddeler.'),
+  roadmap: z.array(z.object({
+    title: z.string().describe('Yol haritası adımının başlığı.'),
+    description: z.string().describe('Yol haritası adımının detaylı açıklaması.'),
+  })).describe('Sınıfın başarısını artırmak için atılması gereken adımları içeren yol haritası.'),
 });
 export type AnalyzeClassReportOutput = z.infer<
   typeof AnalyzeClassReportOutputSchema
@@ -81,6 +85,7 @@ Rapor aşağıdaki gibi yapılandırılmalıdır:
 1.  **summary:** Sınıfın genel akademik performansını, deneme ortalamalarını ve genel potansiyelini değerlendiren bir paragraf yaz.
 2.  **strengths:** Sınıfın bir bütün olarak başarılı olduğu, ortalamalarının yüksek olduğu dersleri veya konuları vurgulayan 2-3 maddelik bir liste oluştur.
 3.  **areasForImprovement:** Sınıfın genel olarak zorlandığı, net ortalamalarının düşük olduğu dersleri veya konuları tespit eden 2-3 maddelik bir liste oluştur. Özellikle LGS'de katsayısı yüksek olan derslerdeki (Matematik, Fen, Türkçe) genel duruma dikkat çek.
+4.  **roadmap:** Sınıfın kolektif performansını artırmak için 5-6 adımlık somut ve uygulanabilir bir yol haritası oluştur. Her adımın bir 'title' (başlık) ve 'description' (açıklama) alanı olmalıdır. Başlıklar kısa ve eyleme yönelik olmalı (örn: "Detaylı Konu ve Kazanım Analizi"). Açıklamalar ise bu adımı detaylandırmalıdır.
 
 Tüm metinleri profesyonel, yapıcı ve yol gösterici bir dille yaz. Analizini, sınıfın kolektif başarısını artırmaya yönelik içgörüler sunacak şekilde odakla.
 
@@ -91,7 +96,7 @@ Sınıf Bilgileri:
 Sınıf Özeti:
 {{{classSummary}}}
 
-Lütfen sadece 'summary', 'strengths' ve 'areasForImprovement' alanlarını doldurarak bir JSON çıktısı üret.`,
+Lütfen sadece 'summary', 'strengths', 'areasForImprovement' ve 'roadmap' alanlarını doldurarak bir JSON çıktısı üret.`,
 });
 
 const analyzeClassReportFlow = ai.defineFlow(

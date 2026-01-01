@@ -419,6 +419,30 @@ function ClassReport() {
                             </div>
                         </CardContent>
                     </Card>
+
+                    {aiAnalysis.roadmap && aiAnalysis.roadmap.length > 0 && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Route className="h-5 w-5 text-primary"/>
+                                    Yol Haritası
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-4">
+                                    {aiAnalysis.roadmap.map((item, index) => (
+                                        <div key={index} className="flex items-start gap-4 p-3 bg-secondary/50 rounded-lg">
+                                            <div className="flex-shrink-0 bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">{index + 1}</div>
+                                            <div>
+                                                <p className="font-semibold">{item.title}</p>
+                                                <p className="text-sm text-muted-foreground">{item.description}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
                  </div>
             )}
         </div>

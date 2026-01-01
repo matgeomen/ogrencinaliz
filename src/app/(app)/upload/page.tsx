@@ -184,7 +184,7 @@ export default function UploadPage() {
             <CardHeader>
                 <CardTitle>PDF Analiz Sonucu</CardTitle>
                 <CardDescription>Yüklenen PDF dosyasının yapay zeka tarafından yapılan analizi.</CardDescription>
-            </Header>
+            </CardHeader>
             <CardContent>
                 <Textarea value={pdfAnalysis} readOnly className="h-64 whitespace-pre-wrap" />
             </CardContent>

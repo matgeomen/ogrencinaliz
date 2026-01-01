@@ -33,7 +33,8 @@ const StudentExamResultSchema = z.object({
 const AnalyzeStudentReportInputSchema = z.object({
   studentName: z.string().describe('Öğrencinin adı.'),
   className: z.string().describe('Öğrencinin sınıfı.'),
-  examResults: z.array(StudentExamResultSchema).describe("Öğrencinin tüm deneme sınavı sonuçları."),
+  examName: z.string().describe("Analiz edilen deneme sınavı (veya 'Tüm Denemeler')."),
+  examResults: z.array(StudentExamResultSchema).describe("Öğrencinin ilgili deneme sınavı sonuçları."),
 });
 export type AnalyzeStudentReportInput = z.infer<typeof AnalyzeStudentReportInputSchema>;
 
@@ -65,6 +66,7 @@ export async function analyzeStudentReport(
   return analyzeStudentReportFlow({
     studentName: input.studentName,
     className: input.className,
+    examName: input.examName,
     examResultsAsText: formattedResults,
   });
 }
@@ -72,6 +74,7 @@ export async function analyzeStudentReport(
 const PromptInputSchema = z.object({
     studentName: z.string(),
     className: z.string(),
+    examName: z.string(),
     examResultsAsText: z.string(),
 });
 
@@ -93,6 +96,7 @@ Tüm metinleri profesyonel, yapıcı ve motive edici bir dille yaz.
 Öğrenci Bilgileri:
 - Ad: {{{studentName}}}
 - Sınıf: {{{className}}}
+- Analiz Edilen Deneme: {{{examName}}}
 
 Analiz Edilecek Deneme Sonuçları Özeti:
 {{{examResultsAsText}}}

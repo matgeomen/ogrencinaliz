@@ -58,13 +58,39 @@ export async function analyzeClassReport(
   input: AnalyzeClassReportInput
 ): Promise<AnalyzeClassReportOutput> {
   const studentCount = new Set(input.examResults.map(r => r.student_no)).size;
-  const totalNet = input.examResults.reduce((sum, r) => sum + r.toplam_net, 0);
-  const totalScore = input.examResults.reduce((sum, r) => sum + r.toplam_puan, 0);
-  const entryCount = input.examResults.length;
+  
+  // Eğer 'Tüm Denemeler' seçildiyse, her öğrencinin ortalamasını al
+  let analyzedResults = input.examResults;
+  if (input.examName === 'Tüm Denemeler') {
+      const studentAverages: { [key: number]: StudentExamResult } = {};
+      const studentCounts: { [key: number]: number } = {};
+
+      input.examResults.forEach(r => {
+          if (!studentAverages[r.student_no]) {
+              studentAverages[r.student_no] = { ...r, exam_name: 'Ortalama', toplam_dogru: 0, toplam_yanlis: 0, toplam_net: 0, toplam_puan: 0, turkce_d: 0, turkce_y: 0, turkce_net: 0, tarih_d: 0, tarih_y: 0, tarih_net: 0, din_d: 0, din_y: 0, din_net: 0, ing_d: 0, ing_y: 0, ing_net: 0, mat_d: 0, mat_y: 0, mat_net: 0, fen_d: 0, fen_y: 0, fen_net: 0 };
+              studentCounts[r.student_no] = 0;
+          }
+          studentAverages[r.student_no].toplam_net += r.toplam_net;
+          studentAverages[r.student_no].toplam_puan += r.toplam_puan;
+          studentCounts[r.student_no]++;
+      });
+
+      Object.keys(studentAverages).forEach(student_no_str => {
+          const student_no = Number(student_no_str);
+          const count = studentCounts[student_no];
+          studentAverages[student_no].toplam_net /= count;
+          studentAverages[student_no].toplam_puan /= count;
+      });
+      analyzedResults = Object.values(studentAverages);
+  }
+
+  const totalNet = analyzedResults.reduce((sum, r) => sum + r.toplam_net, 0);
+  const totalScore = analyzedResults.reduce((sum, r) => sum + r.toplam_puan, 0);
+  const entryCount = analyzedResults.length;
   const avgNet = entryCount > 0 ? (totalNet / entryCount) : 0;
   const avgScore = entryCount > 0 ? (totalScore / entryCount) : 0;
 
-  const summaryText = `Sınıfta ${studentCount} öğrenci bulunmaktadır. Analiz edilen ${entryCount} sınav kaydına göre sınıfın genel net ortalaması ${avgNet.toFixed(2)}, puan ortalaması ise ${avgScore.toFixed(2)}'dir.`;
+  const summaryText = `Sınıfta ${studentCount} öğrenci bulunmaktadır. Analiz edilen "${input.examName}" kapsamındaki verilere göre sınıfın genel net ortalaması ${avgNet.toFixed(2)}, puan ortalaması ise ${avgScore.toFixed(2)}'dir.`;
 
   return analyzeClassReportFlow({
     className: input.className,

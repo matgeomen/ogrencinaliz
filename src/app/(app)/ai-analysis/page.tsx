@@ -203,7 +203,7 @@ export default function AiAnalysisPage() {
       );
     }
 
-    const { summary, strengths, areasForImprovement, roadmap, recommendations } = analysisResult as AnalyzeStudentReportOutput;
+    const { roadmap } = analysisResult as AnalyzeStudentReportOutput;
 
     return (
         <div className="space-y-6">
@@ -215,27 +215,6 @@ export default function AiAnalysisPage() {
                     </CardTitle>
                     <CardDescription>{examNameForTitle}</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                    <p className="text-sm text-muted-foreground p-4 bg-secondary/50 rounded-lg">{summary}</p>
-                    <div className="grid md:grid-cols-2 gap-6">
-                        <Card className="border-green-200 bg-green-50/50 dark:bg-green-900/20 dark:border-green-800">
-                            <CardHeader><CardTitle className="text-base font-semibold flex items-center gap-2 text-green-800 dark:text-green-300"><TrendingUp className="h-5 w-5"/>Güçlü Yönler</CardTitle></CardHeader>
-                            <CardContent>
-                                <ul className="space-y-2 text-sm list-disc pl-5 text-green-900 dark:text-green-200">
-                                    {strengths.map((item:string, index:number) => <li key={index} className="pl-2"><span>{item}</span></li>)}
-                                </ul>
-                            </CardContent>
-                        </Card>
-                        <Card className="border-orange-200 bg-orange-50/50 dark:bg-orange-900/20 dark:border-orange-800">
-                            <CardHeader><CardTitle className="text-base font-semibold flex items-center gap-2 text-orange-800 dark:text-orange-300"><AlertTriangle className="h-5 w-5"/>Geliştirilmesi Gerekenler</CardTitle></CardHeader>
-                            <CardContent>
-                                <ul className="space-y-2 text-sm list-disc pl-5 text-orange-900 dark:text-orange-200">
-                                    {areasForImprovement.map((item:string, index:number) => <li key={index} className="pl-2"><span>{item}</span></li>)}
-                                </ul>
-                            </CardContent>
-                        </Card>
-                    </div>
-                </CardContent>
             </Card>
 
             {roadmap && roadmap.length > 0 && (
@@ -244,25 +223,11 @@ export default function AiAnalysisPage() {
                     <CardContent>
                         <div className="space-y-4">
                             {roadmap.map((item:any, index:number) => (
-                                <div key={index} className="flex items-start gap-4 p-3 bg-secondary/50 rounded-lg">
+                                <div key={index} className="flex items-start gap-4 p-4 bg-secondary/50 rounded-lg">
                                     <div className="flex-shrink-0 bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">{index + 1}</div>
-                                    <div><p className="font-semibold">{item.title}</p><p className="text-sm text-muted-foreground">{item.description}</p></div>
-                                </div>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
-
-            {recommendations && recommendations.length > 0 && (
-                <Card>
-                    <CardHeader><CardTitle className="flex items-center gap-2"><GraduationCap className="h-5 w-5 text-primary"/>Öneriler</CardTitle></CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            {recommendations.map((item:any, index:number) => (
-                                <div key={index} className="flex items-start gap-3 p-3 bg-secondary/50 rounded-lg">
-                                    <Lightbulb className="h-5 w-5 mt-1 text-yellow-500 shrink-0"/>
-                                    <div><p className="font-semibold">{item.title}</p><p className="text-sm text-muted-foreground">{item.description}</p></div>
+                                    <div>
+                                        <p className="text-muted-foreground">{item.description.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-foreground">$1</strong>').split('**').map((part:string, i:number) => i % 2 === 1 ? <strong key={i} className="font-semibold text-foreground">{part}</strong> : part)}</p>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -275,7 +240,9 @@ export default function AiAnalysisPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="AI Analiz" description="Yapay zeka destekli öğrenci ve sınıf değerlendirmesi" />
+      <div className="flex items-center justify-between no-print">
+        <PageHeader title="AI Analiz" description="Yapay zeka destekli öğrenci ve sınıf değerlendirmesi" />
+      </div>
       <Card>
         <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-end gap-4">
             <div className="w-full sm:w-auto flex-1">
@@ -341,3 +308,5 @@ export default function AiAnalysisPage() {
     </div>
   );
 }
+
+    

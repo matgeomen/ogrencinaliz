@@ -112,7 +112,9 @@ function AppHeader() {
             <DropdownMenuItem asChild>
               <Link href="/profile">Profil</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem>Ayarlar</DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/settings">Ayarlar</Link>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem>Çıkış Yap</DropdownMenuItem>
           </DropdownMenuContent>

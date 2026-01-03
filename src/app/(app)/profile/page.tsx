@@ -10,6 +10,7 @@ import { Database, Save, User, Settings } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { PlaceHolderImages } from "@/lib/placeholder-images"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import Link from "next/link"
 
 export default function ProfilePage() {
   const profileAvatar = PlaceHolderImages.find(img => img.id === 'profile-avatar');
@@ -68,9 +69,11 @@ export default function ProfilePage() {
                 <AlertDescription className="text-yellow-700 dark:text-yellow-300/80 text-sm mt-1">
                   Bulut depolama için Ayarlar sayfasından bağlantı yapın.
                 </AlertDescription>
-                <Button variant="outline" size="sm" className="mt-3">
-                  <Settings className="mr-2 h-4 w-4"/>
-                  Ayarlara Git
+                <Button variant="outline" size="sm" className="mt-3" asChild>
+                  <Link href="/settings">
+                    <Settings className="mr-2 h-4 w-4"/>
+                    Ayarlara Git
+                  </Link>
                 </Button>
               </Alert>
           </CardContent>

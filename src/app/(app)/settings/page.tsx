@@ -7,10 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Sun, KeyRound, ExternalLink, Trash2, Eye, EyeOff, Moon, Laptop, Link as LinkIcon, FileSpreadsheet, Info, CheckCircle } from "lucide-react";
+import { Sun, KeyRound, ExternalLink, Trash2, Eye, EyeOff, Moon, Laptop, Link as LinkIcon, FileSpreadsheet, Info, CheckCircle, Settings as SettingsIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import Link from "next/link";
 
 export default function SettingsPage() {
     const { theme, setTheme } = useTheme();
@@ -72,16 +73,9 @@ export default function SettingsPage() {
                             <div className="space-y-2">
                                 <div className="flex items-center gap-2">
                                     <Label htmlFor="client-id">Google Client ID</Label>
-                                    <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200 hover:bg-green-100">
-                                        <CheckCircle className="mr-1 h-3 w-3" />
-                                        Kaydedildi
-                                    </Badge>
                                 </div>
                                 <div className="relative">
                                     <Input id="client-id" placeholder="Client ID..." />
-                                     <Button variant="ghost" size="icon" disabled className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7">
-                                        <Eye className="h-4 w-4"/>
-                                    </Button>
                                 </div>
                             </div>
                              <div className="space-y-2">
@@ -96,10 +90,50 @@ export default function SettingsPage() {
                         </div>
 
                         <div className="flex justify-end">
-                            <Button className="w-full sm:w-auto">
+                            <Button className="w-full sm:w-auto" variant="outline">
                                 <FileSpreadsheet className="mr-2 h-4 w-4"/>
                                 Google Bilgilerini Kaydet
                             </Button>
+                        </div>
+
+                        <Alert variant="default" className="bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800">
+                          <AlertTitle className="text-yellow-800 dark:text-yellow-300 font-semibold">Google Sheets Kurulumu:</AlertTitle>
+                          <AlertDescription className="text-yellow-700 dark:text-yellow-300/80 text-sm">
+                            <ol className="list-decimal list-inside space-y-1 mt-2">
+                                <li><a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="underline font-medium hover:text-yellow-800">Google Cloud Console'a</a> gidin</li>
+                                <li>Yeni proje oluşturun</li>
+                                <li>Google Sheets API'yi etkinleştirin</li>
+                                <li>OAuth 2.0 kimlik bilgileri oluşturun</li>
+                                <li>Authorized redirect URI olarak ekleyin:
+                                    <code className="block my-1 p-2 bg-yellow-100 dark:bg-yellow-800/50 rounded text-xs">https://student-progress-28.preview.emergentagent.com/api/oauth/sheets/callback</code>
+                                </li>
+                                <li>Client ID ve Secret'ı yukarıya girin</li>
+                            </ol>
+                          </AlertDescription>
+                        </Alert>
+                    </CardContent>
+                </Card>
+                
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><SettingsIcon className="h-5 w-5"/> Sistem Bilgisi</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4 text-sm">
+                        <div className="flex justify-between items-center">
+                            <span className="text-muted-foreground">Versiyon</span>
+                            <span className="font-medium">1.2.0</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <span className="text-muted-foreground">AI Motoru</span>
+                            <span className="font-medium">Gemini 2.5 Flash</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <span className="text-muted-foreground">Veritabanı</span>
+                            <span className="font-medium">MongoDB</span>
+                        </div>
+                         <div className="flex justify-between items-center">
+                            <span className="text-muted-foreground">Bulut Depolama</span>
+                            <span className="font-medium">Google Sheets</span>
                         </div>
                     </CardContent>
                 </Card>

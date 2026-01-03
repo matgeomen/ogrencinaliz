@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import { NextRequest, NextResponse } from 'next/server';
@@ -36,22 +37,7 @@ const headerRow: (keyof StudentExamResult)[] = [
 ];
 
 function isStudentExamResult(obj: any): obj is StudentExamResult {
-  return headerRow.every(key => {
-    const value = obj[key];
-    if (value === undefined || value === null) return false;
-
-    const numericKeys: (keyof StudentExamResult)[] = [
-        "student_no", "toplam_dogru", "toplam_yanlis", "toplam_net", "toplam_puan",
-        "turkce_d", "turkce_y", "turkce_net", "tarih_d", "tarih_y", "tarih_net",
-        "din_d", "din_y", "din_net", "ing_d", "ing_y", "ing_net", "mat_d", 
-        "mat_y", "mat_net", "fen_d", "fen_y", "fen_net"
-    ];
-
-    if (numericKeys.includes(key)) {
-        return typeof value === 'number' && !isNaN(value);
-    }
-    return typeof value === 'string';
-  });
+  return obj && typeof obj.student_no === 'number' && typeof obj.student_name === 'string';
 }
 
 export async function GET(req: NextRequest) {
@@ -92,7 +78,7 @@ export async function GET(req: NextRequest) {
                 }
             });
             return rowData as StudentExamResult;
-        }).filter(item => item.student_no && item.student_name && isStudentExamResult(item));
+        }).filter(item => isStudentExamResult(item));
 
         return NextResponse.json(data);
     } catch (error: any) {
@@ -123,19 +109,6 @@ export async function POST(req: NextRequest) {
             range: SHEET_NAME,
         });
         
-        // If data is empty, we just cleared the sheet, so we're done after writing the header.
-        if (data.length === 0) {
-             await sheets.spreadsheets.values.update({
-                spreadsheetId: SHEET_ID,
-                range: `${SHEET_NAME}!A1`,
-                valueInputOption: 'USER_ENTERED',
-                requestBody: {
-                    values: [headerRow],
-                },
-            });
-             return NextResponse.json({ success: true, message: "Sheet cleared and header restored." });
-        }
-
         const values = [
             headerRow,
             ...data.map(item => headerRow.map(key => item[key]))

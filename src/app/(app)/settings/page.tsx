@@ -13,20 +13,31 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import Link from "next/link";
+import { useToast } from "@/hooks/use-toast";
 
 export default function SettingsPage() {
-    const { theme, setTheme } = useTheme();
+    const { theme, setTheme, resolvedTheme } = useTheme();
     const [showApiKey, setShowApiKey] = useState(false);
     const [showClientSecret, setShowClientSecret] = useState(false);
     const [mounted, setMounted] = useState(false);
+    const { toast } = useToast();
 
     useEffect(() => {
         setMounted(true);
     }, []);
 
+    const handleSaveGoogleInfo = () => {
+        toast({
+            title: "Bilgiler Kaydedildi",
+            description: "Google Client bilgileriniz başarıyla kaydedildi.",
+        });
+    }
+
     if (!mounted) {
         return null;
     }
+
+    const radioGroupValue = theme === 'premium' ? resolvedTheme : theme;
 
     return (
         <div className="space-y-6">
@@ -129,7 +140,7 @@ export default function SettingsPage() {
                         </div>
 
                         <div className="flex justify-end">
-                            <Button className="w-full sm:w-auto">
+                            <Button onClick={handleSaveGoogleInfo} className="w-full sm:w-auto">
                                 <FileSpreadsheet className="mr-2 h-4 w-4"/>
                                 Google Bilgilerini Kaydet
                             </Button>

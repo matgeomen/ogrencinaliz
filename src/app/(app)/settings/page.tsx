@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Sun, KeyRound, ExternalLink, Trash2, Eye, EyeOff, Moon, Laptop, Link as LinkIcon, FileSpreadsheet, Info, CheckCircle, Settings as SettingsIcon } from "lucide-react";
+import { Sun, KeyRound, ExternalLink, Trash2, Eye, EyeOff, Moon, Laptop, Link as LinkIcon, FileSpreadsheet, Info, CheckCircle, Settings as SettingsIcon, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -25,7 +25,7 @@ export default function SettingsPage() {
     }, []);
 
     if (!mounted) {
-        return null; // or a loading skeleton
+        return null;
     }
 
     return (
@@ -129,7 +129,7 @@ export default function SettingsPage() {
                         </div>
 
                         <div className="flex justify-end">
-                            <Button className="w-full sm:w-auto" variant="outline">
+                            <Button className="w-full sm:w-auto">
                                 <FileSpreadsheet className="mr-2 h-4 w-4"/>
                                 Google Bilgilerini Kaydet
                             </Button>

@@ -54,7 +54,7 @@ export async function analyzeParentReport(
   input: AnalyzeParentReportInput
 ): Promise<AnalyzeParentReportOutput> {
   const formattedResults = input.examResults.map(r => 
-    `Deneme: ${r.exam_name}, Puan: ${r.toplam_puan.toFixed(2)}, Net: ${r.toplam_net.toFixed(2)}`
+    `Deneme: ${r.exam_name}, Puan: ${r.toplam_puan.toFixed(2)}, Net: ${r.toplam_net.toFixed(2)} (Türkçe: ${r.turkce_net.toFixed(2)}, Mat: ${r.mat_net.toFixed(2)}, Fen: ${r.fen_net.toFixed(2)})`
   ).join('\n');
 
   return analyzeParentReportFlow({
@@ -78,8 +78,8 @@ const prompt = ai.definePrompt({
 
 Rapor aşağıdaki gibi yapılandırılmalıdır:
 1.  **summary:** Öğrencinin genel akademik durumunu özetle. Başarılarını ve çabasını takdir et. Gelişim alanlarına nazikçe değin. Örneğin: "{{{studentName}}}, girdiği denemelerde genel olarak iyi bir performans sergiliyor ve çabası takdire şayan. Özellikle bazı derslerdeki başarısı göz doldururken, bazı konularda ise ona destek olarak daha da başarılı olmasını sağlayabiliriz."
-2.  **strengths:** Öğrencinin başarılı olduğu dersleri veya alanları belirt. "Şu derste çok başarılı" gibi basit ve övücü ifadeler kullan.
-3.  **areasForImprovement:** Desteğe ihtiyaç duyduğu alanları belirt. "Matematik dersinde biraz zorlanıyor" gibi ifadeler kullan. Asla "başarısız", "kötü" gibi kelimeler kullanma. "Bu alanda potansiyelini tam olarak göstermesi için desteğimize ihtiyacı var" gibi yapıcı bir dil kullan.
+2.  **strengths:** Öğrencinin başarılı olduğu dersleri veya alanları belirt. "Şu derste çok başarılı" gibi basit ve övücü ifadeler kullan. Verilen sayısal net/puan verilerini yorumlayarak spesifik dersleri belirle.
+3.  **areasForImprovement:** Desteğe ihtiyaç duyduğu alanları belirt. "Matematik dersinde biraz zorlanıyor" gibi ifadeler kullan. Asla "başarısız", "kötü" gibi kelimeler kullanma. "Bu alanda potansiyelini tam olarak göstermesi için desteğimize ihtiyacı var" gibi yapıcı bir dil kullan. Verilen sayısal net/puan verilerini yorumlayarak spesifik dersleri belirle.
 4.  **homeSupportSuggestions:** Velinin evde yapabileceği, somut ve basit 3-4 öneri sun. Her önerinin bir 'title' (başlık) ve 'description' (açıklama) alanı olmalıdır. Örneğin, başlık "Çalışma Ortamını Gözden Geçirme" ve açıklama "Ders çalışırken dikkatini dağıtacak unsurların (telefon, televizyon vb.) daha az olduğu sessiz bir ortam oluşturmak, odaklanmasına yardımcı olabilir." veya başlık "Birlikte Kitap Okuma Saati" ve açıklama "Her gün 15-20 dakika bile olsa birlikte kitap okumak, okuduğunu anlama becerisini tüm dersler için geliştirecektir."
 
 Öğrenci Bilgileri:

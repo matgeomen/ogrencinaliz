@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { StudentExamResult } from '@/types';
-import { FileText, Users, Home, Loader2, Printer, BrainCircuit, Lightbulb, TrendingDown, Route, CheckCircle, GraduationCap, HeartHandshake, ChevronDown } from 'lucide-react';
+import { FileText, Users, Home, Loader2, Printer, BrainCircuit, Lightbulb, TrendingDown, Route, CheckCircle, GraduationCap, HeartHandshake, ChevronDown, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { analyzeStudentReport, AnalyzeStudentReportOutput } from '@/ai/flows/analyze-student-report-flow';
 import { analyzeClassReport, AnalyzeClassReportOutput } from '@/ai/flows/analyze-class-report-flow';
@@ -45,14 +45,14 @@ const handleDownloadPdf = async (reportId: string, fileName: string) => {
     for (const card of cards) {
         try {
             const canvas = await html2canvas(card, {
-                scale: 1, // Optimized scale
+                scale: 2, 
                 useCORS: true,
                 logging: false,
                 windowWidth: card.scrollWidth,
                 windowHeight: card.scrollHeight,
             });
 
-            const imgData = canvas.toDataURL('image/png', 0.9); // Use jpeg with quality for smaller size
+            const imgData = canvas.toDataURL('image/png', 0.95);
             const imgWidth = canvas.width;
             const imgHeight = canvas.height;
             const ratio = imgWidth / imgHeight;
@@ -95,9 +95,9 @@ function StudentReport() {
     const selectedStudentResults = useMemo(() => {
         if (!selectedStudentNo || selectedExams.length === 0) return [];
         return studentData
-            .filter(s => s.student_no.toString() === selectedStudentNo && (selectedExams.includes('all') || selectedExams.includes(s.exam_name)))
+            .filter(s => s.student_no.toString() === selectedStudentNo && (selectedExams.length === exams.length || selectedExams.includes(s.exam_name)))
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [studentData, selectedStudentNo, selectedExams]);
+    }, [studentData, selectedStudentNo, selectedExams, exams]);
 
     const handleGenerate = async () => {
         if (!selectedStudentNo || selectedStudentResults.length === 0) {
@@ -116,16 +116,16 @@ function StudentReport() {
             });
             setAiAnalysis(result);
             toast({ title: "AI Raporu başarıyla oluşturuldu." });
-        } catch (error) {
+        } catch (error: any) {
             console.error("AI Analysis Error:", error);
-            toast({ title: "Rapor oluşturulurken bir hata oluştu.", variant: 'destructive' });
+            toast({ title: "Rapor oluşturulurken bir hata oluştu.", description: error.message, variant: 'destructive' });
         } finally {
             setIsGenerating(false);
         }
     }
     
     const selectedStudentName = studentsInClass.find(s => s.student_no.toString() === selectedStudentNo)?.student_name;
-    const examNameForTitle = selectedExams.length === 0 ? "Deneme Seçilmedi" : selectedExams.includes('all') || selectedExams.length === exams.length ? 'Tüm Denemeler' : selectedExams.join(', ');
+    const examNameForTitle = selectedExams.length === 0 ? "Deneme Seçilmedi" : selectedExams.length === exams.length ? 'Tüm Denemeler' : selectedExams.join(', ');
 
     const handleClassChange = (c: string) => {
         setSelectedClass(c);
@@ -142,7 +142,7 @@ function StudentReport() {
         setAiAnalysis(null);
         setSelectedExams(prev => {
             if (exam === 'all') {
-                return prev.length === exams.length ? [] : exams;
+                return prev.length === exams.length ? [] : exams.map(e => e);
             }
             const newExams = prev.includes(exam) 
                 ? prev.filter(e => e !== exam)
@@ -161,48 +161,51 @@ function StudentReport() {
     return (
         <div className="report-section">
             <Card className="no-print">
-                <CardContent className="p-4 flex flex-col sm:flex-row gap-4">
-                    <Select value={selectedClass} onValueChange={handleClassChange}>
-                        <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Sınıf Seçin"/></SelectTrigger>
-                        <SelectContent>
-                        {classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    
-                    <Select value={selectedStudentNo} onValueChange={handleStudentChange} disabled={!selectedClass}>
-                        <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Öğrenci Seçin"/></SelectTrigger>
-                        <SelectContent>
-                        {studentsInClass.map(s => <SelectItem key={s.student_no} value={s.student_no.toString()}>{s.student_name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild disabled={!selectedStudentNo}>
-                            <Button variant="outline" className="w-full sm:w-[200px] justify-between">
-                                Deneme Seçin ({selectedExams.length}) <ChevronDown className="h-4 w-4 opacity-50" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="w-56">
-                            <DropdownMenuLabel>Deneme Sınavları</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuCheckboxItem
-                                checked={selectedExams.length === exams.length}
-                                onCheckedChange={() => handleExamChange('all')}
-                            >
-                                Tüm Denemeler
-                            </DropdownMenuCheckboxItem>
-                            {exams.map(e => (
+                <CardContent className="p-4 flex flex-col sm:flex-row items-end gap-4">
+                    <div className="w-full sm:w-auto flex-1">
+                        <Select value={selectedClass} onValueChange={handleClassChange}>
+                            <SelectTrigger><SelectValue placeholder="Sınıf Seçin"/></SelectTrigger>
+                            <SelectContent>
+                            {classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="w-full sm:w-auto flex-1">
+                        <Select value={selectedStudentNo} onValueChange={handleStudentChange} disabled={!selectedClass}>
+                            <SelectTrigger><SelectValue placeholder="Öğrenci Seçin"/></SelectTrigger>
+                            <SelectContent>
+                            {studentsInClass.map(s => <SelectItem key={s.student_no} value={s.student_no.toString()}>{s.student_name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="w-full sm:w-auto flex-1">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild disabled={!selectedStudentNo}>
+                                <Button variant="outline" className="w-full justify-between">
+                                    Deneme Seçin ({selectedExams.length}) <ChevronDown className="h-4 w-4 opacity-50" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                                <DropdownMenuLabel>Deneme Sınavları</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
                                 <DropdownMenuCheckboxItem
-                                    key={e}
-                                    checked={selectedExams.includes(e)}
-                                    onCheckedChange={() => handleExamChange(e)}
+                                    checked={selectedExams.length === exams.length && exams.length > 0}
+                                    onCheckedChange={() => handleExamChange('all')}
                                 >
-                                    {e}
+                                    Tüm Denemeler
                                 </DropdownMenuCheckboxItem>
-                            ))}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                    
+                                {exams.map(e => (
+                                    <DropdownMenuCheckboxItem
+                                        key={e}
+                                        checked={selectedExams.includes(e)}
+                                        onCheckedChange={() => handleExamChange(e)}
+                                    >
+                                        {e}
+                                    </DropdownMenuCheckboxItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
                     <Button onClick={handleGenerate} disabled={isGenerating || !selectedStudentNo || selectedExams.length === 0} className="w-full sm:w-auto">
                         {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BrainCircuit className="mr-2 h-4 w-4" />}
                         Rapor Oluştur
@@ -321,7 +324,7 @@ function StudentReport() {
                                             <ul className="space-y-2 text-sm text-orange-900 dark:text-orange-200">
                                                 {aiAnalysis.areasForImprovement.map((item, index) => (
                                                     <li key={index} className="flex items-start gap-2">
-                                                        <TrendingDown className="h-4 w-4 mt-0.5 text-orange-600 shrink-0"/>
+                                                        <AlertTriangle className="h-4 w-4 mt-0.5 text-orange-600 shrink-0"/>
                                                         <span>{item}</span>
                                                     </li>
                                                 ))}
@@ -355,30 +358,6 @@ function StudentReport() {
                                 </CardContent>
                             </Card>
                         )}
-
-                        {aiAnalysis.recommendations && aiAnalysis.recommendations.length > 0 && (
-                            <Card className="print-card">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <GraduationCap className="h-5 w-5 text-primary"/>
-                                        Öneriler
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-4">
-                                        {aiAnalysis.recommendations.map((item, index) => (
-                                            <div key={index} className="flex items-start gap-3 p-3 bg-secondary/50 rounded-lg">
-                                                <Lightbulb className="h-5 w-5 mt-1 text-yellow-500 shrink-0"/>
-                                                <div>
-                                                    <p className="font-semibold">{item.title}</p>
-                                                    <p className="text-sm text-muted-foreground">{item.description}</p>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        )}
                     </>
                 )}
             </div>
@@ -402,9 +381,9 @@ function ClassReport() {
         if (!selectedClass || selectedExams.length === 0) return [];
          return studentData.filter(d => 
             d.class === selectedClass && 
-            (selectedExams.includes('all') || selectedExams.includes(d.exam_name))
+            (selectedExams.length === exams.length || selectedExams.includes(d.exam_name))
         );
-    }, [studentData, selectedClass, selectedExams]);
+    }, [studentData, selectedClass, selectedExams, exams]);
 
     const handleGenerate = async () => {
         if (!selectedClass) {
@@ -420,7 +399,7 @@ function ClassReport() {
 
         const classData = studentData.filter(d => 
             d.class === selectedClass && 
-            (selectedExams.includes('all') || selectedExams.includes(d.exam_name))
+            (selectedExams.length === exams.length || selectedExams.includes(d.exam_name))
         );
 
         if (classData.length === 0) {
@@ -437,15 +416,15 @@ function ClassReport() {
             });
             setAiAnalysis(result);
             toast({ title: "Sınıf Raporu başarıyla oluşturuldu." });
-        } catch (error) {
+        } catch (error: any) {
             console.error("AI Class Analysis Error:", error);
-            toast({ title: "Sınıf raporu oluşturulurken bir hata oluştu.", variant: 'destructive' });
+            toast({ title: "Sınıf raporu oluşturulurken bir hata oluştu.", description: error.message, variant: 'destructive' });
         } finally {
             setIsGenerating(false);
         }
     }
 
-    const examNameForTitle = selectedExams.length === 0 ? "Deneme Seçilmedi" : selectedExams.length === exams.length || selectedExams.includes('all') ? 'Tüm Denemeler' : selectedExams.join(', ');
+    const examNameForTitle = selectedExams.length === 0 ? "Deneme Seçilmedi" : selectedExams.length === exams.length ? 'Tüm Denemeler' : selectedExams.join(', ');
 
     const handleClassChange = (c: string) => {
         setSelectedClass(c);
@@ -456,7 +435,7 @@ function ClassReport() {
         setAiAnalysis(null);
         setSelectedExams(prev => {
             if (exam === 'all') {
-                return prev.length === exams.length ? [] : exams;
+                return prev.length === exams.length ? [] : exams.map(e => e);
             }
              let newExams = prev.includes(exam) 
                 ? prev.filter(e => e !== exam)
@@ -469,7 +448,7 @@ function ClassReport() {
     const onDownload = async () => {
         if (!selectedClass) return;
         setIsDownloading(true);
-        const examName = examNameForTitle.replace(/\s+/g, '-').toLowerCase();
+        const examName = examNameForTitle.replace(/[\s,]+/g, '-').toLowerCase();
         await handleDownloadPdf('class-report-content', `${selectedClass}-sinifi-${examName}-rapor`);
         setIsDownloading(false);
     }
@@ -477,41 +456,43 @@ function ClassReport() {
     return (
          <div className="report-section">
             <Card className="no-print">
-                <CardContent className="p-4 flex flex-col sm:flex-row gap-4">
-                    <Select value={selectedClass} onValueChange={handleClassChange}>
-                        <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Sınıf Seçin"/></SelectTrigger>
-                        <SelectContent>
-                            {classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild disabled={!selectedClass}>
-                            <Button variant="outline" className="w-full sm:w-[200px] justify-between">
-                                Deneme Seçin ({selectedExams.length}) <ChevronDown className="h-4 w-4 opacity-50" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="w-56">
-                            <DropdownMenuLabel>Deneme Sınavları</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuCheckboxItem
-                                checked={selectedExams.length === exams.length}
-                                onCheckedChange={() => handleExamChange('all')}
-                            >
-                                Tüm Denemeler
-                            </DropdownMenuCheckboxItem>
-                            {exams.map(e => (
+                <CardContent className="p-4 flex flex-col sm:flex-row items-end gap-4">
+                    <div className="w-full sm:w-auto flex-1">
+                        <Select value={selectedClass} onValueChange={handleClassChange}>
+                            <SelectTrigger><SelectValue placeholder="Sınıf Seçin"/></SelectTrigger>
+                            <SelectContent>
+                                {classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="w-full sm:w-auto flex-1">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild disabled={!selectedClass}>
+                                <Button variant="outline" className="w-full justify-between">
+                                    Deneme Seçin ({selectedExams.length}) <ChevronDown className="h-4 w-4 opacity-50" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                                <DropdownMenuLabel>Deneme Sınavları</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
                                 <DropdownMenuCheckboxItem
-                                    key={e}
-                                    checked={selectedExams.includes(e)}
-                                    onCheckedChange={() => handleExamChange(e)}
+                                    checked={selectedExams.length === exams.length && exams.length > 0}
+                                    onCheckedChange={() => handleExamChange('all')}
                                 >
-                                    {e}
+                                    Tüm Denemeler
                                 </DropdownMenuCheckboxItem>
-                            ))}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                    
+                                {exams.map(e => (
+                                    <DropdownMenuCheckboxItem
+                                        key={e}
+                                        checked={selectedExams.includes(e)}
+                                        onCheckedChange={() => handleExamChange(e)}
+                                    >
+                                        {e}
+                                    </DropdownMenuCheckboxItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
                     <Button onClick={handleGenerate} disabled={isGenerating || !selectedClass || selectedExams.length === 0} className="w-full sm:w-auto">
                         {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BrainCircuit className="mr-2 h-4 w-4" />}
                         Rapor Oluştur
@@ -577,7 +558,7 @@ function ClassReport() {
                                             <ul className="space-y-2 text-sm text-orange-900 dark:text-orange-200">
                                                 {aiAnalysis.areasForImprovement.map((item, index) => (
                                                     <li key={index} className="flex items-start gap-2">
-                                                        <TrendingDown className="h-4 w-4 mt-0.5 text-orange-600 shrink-0"/>
+                                                        <AlertTriangle className="h-4 w-4 mt-0.5 text-orange-600 shrink-0"/>
                                                         <span>{item}</span>
                                                     </li>
                                                 ))}
@@ -611,36 +592,13 @@ function ClassReport() {
                                 </CardContent>
                             </Card>
                         )}
-                        {aiAnalysis.recommendations && aiAnalysis.recommendations.length > 0 && (
-                            <Card className="print-card">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <GraduationCap className="h-5 w-5 text-primary"/>
-                                        Öneriler
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-4">
-                                        {aiAnalysis.recommendations.map((item, index) => (
-                                            <div key={index} className="flex items-start gap-3 p-3 bg-secondary/50 rounded-lg">
-                                                <Lightbulb className="h-5 w-5 mt-1 text-yellow-500 shrink-0"/>
-                                                <div>
-                                                    <p className="font-semibold">{item.title}</p>
-                                                    <p className="text-sm text-muted-foreground">{item.description}</p>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        )}
                         {classDataForTable.length > 0 && (
                              <Card className="print-card">
                                 <CardHeader>
                                     <CardTitle>Detaylı Sonuçlar</CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="relative w-full overflow-auto rounded-md border">
+                                    <div className="relative w-full overflow-auto rounded-md border max-h-96">
                                         <Table>
                                             <TableHeader>
                                                 <TableRow>
@@ -692,9 +650,9 @@ function ParentReport() {
     const selectedStudentResults = useMemo(() => {
         if (!selectedStudentNo || selectedExams.length === 0) return [];
         return studentData
-            .filter(s => s.student_no.toString() === selectedStudentNo && (selectedExams.includes('all') || selectedExams.includes(s.exam_name)))
+            .filter(s => s.student_no.toString() === selectedStudentNo && (selectedExams.length === exams.length || selectedExams.includes(s.exam_name)))
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [studentData, selectedStudentNo, selectedExams]);
+    }, [studentData, selectedStudentNo, selectedExams, exams]);
 
     const handleGenerate = async () => {
         if (!selectedStudentNo || selectedStudentResults.length === 0) {
@@ -712,16 +670,16 @@ function ParentReport() {
             });
             setAiAnalysis(result);
             toast({ title: "Veli Raporu başarıyla oluşturuldu." });
-        } catch (error) {
+        } catch (error: any) {
             console.error("AI Parent Analysis Error:", error);
-            toast({ title: "Veli raporu oluşturulurken bir hata oluştu.", variant: 'destructive' });
+            toast({ title: "Veli raporu oluşturulurken bir hata oluştu.", description: error.message, variant: 'destructive' });
         } finally {
             setIsGenerating(false);
         }
     }
 
     const selectedStudentName = studentsInClass.find(s => s.student_no.toString() === selectedStudentNo)?.student_name;
-    const examNameForTitle = selectedExams.length === 0 ? "Deneme Seçilmedi" : selectedExams.includes('all') || selectedExams.length === exams.length ? 'Tüm Denemeler' : selectedExams.join(', ');
+    const examNameForTitle = selectedExams.length === 0 ? "Deneme Seçilmedi" : selectedExams.length === exams.length ? 'Tüm Denemeler' : selectedExams.join(', ');
 
     const handleClassChange = (c: string) => {
         setSelectedClass(c);
@@ -738,7 +696,7 @@ function ParentReport() {
         setAiAnalysis(null);
         setSelectedExams(prev => {
             if (exam === 'all') {
-                return prev.length === exams.length ? [] : exams;
+                return prev.length === exams.length ? [] : exams.map(e => e);
             }
             const newExams = prev.includes(exam) 
                 ? prev.filter(e => e !== exam)
@@ -757,41 +715,47 @@ function ParentReport() {
     return (
         <div className="report-section">
             <Card className="no-print">
-                <CardContent className="p-4 flex flex-col sm:flex-row gap-4">
-                    <Select value={selectedClass} onValueChange={handleClassChange}>
-                        <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Sınıf Seçin"/></SelectTrigger>
-                        <SelectContent>{classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                    </Select>
-                    <Select value={selectedStudentNo} onValueChange={handleStudentChange} disabled={!selectedClass}>
-                        <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Öğrenci Seçin"/></SelectTrigger>
-                        <SelectContent>{studentsInClass.map(s => <SelectItem key={s.student_no} value={s.student_no.toString()}>{s.student_name}</SelectItem>)}</SelectContent>
-                    </Select>
-                     <DropdownMenu>
-                        <DropdownMenuTrigger asChild disabled={!selectedStudentNo}>
-                            <Button variant="outline" className="w-full sm:w-[200px] justify-between">
-                                Deneme Seçin ({selectedExams.length}) <ChevronDown className="h-4 w-4 opacity-50" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="w-56">
-                            <DropdownMenuLabel>Deneme Sınavları</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuCheckboxItem
-                                checked={selectedExams.length === exams.length}
-                                onCheckedChange={() => handleExamChange('all')}
-                            >
-                                Tüm Denemeler
-                            </DropdownMenuCheckboxItem>
-                            {exams.map(e => (
+                <CardContent className="p-4 flex flex-col sm:flex-row items-end gap-4">
+                    <div className="w-full sm:w-auto flex-1">
+                        <Select value={selectedClass} onValueChange={handleClassChange}>
+                            <SelectTrigger><SelectValue placeholder="Sınıf Seçin"/></SelectTrigger>
+                            <SelectContent>{classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                        </Select>
+                    </div>
+                    <div className="w-full sm:w-auto flex-1">
+                        <Select value={selectedStudentNo} onValueChange={handleStudentChange} disabled={!selectedClass}>
+                            <SelectTrigger><SelectValue placeholder="Öğrenci Seçin"/></SelectTrigger>
+                            <SelectContent>{studentsInClass.map(s => <SelectItem key={s.student_no} value={s.student_no.toString()}>{s.student_name}</SelectItem>)}</SelectContent>
+                        </Select>
+                    </div>
+                    <div className="w-full sm:w-auto flex-1">
+                         <DropdownMenu>
+                            <DropdownMenuTrigger asChild disabled={!selectedStudentNo}>
+                                <Button variant="outline" className="w-full justify-between">
+                                    Deneme Seçin ({selectedExams.length}) <ChevronDown className="h-4 w-4 opacity-50" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                                <DropdownMenuLabel>Deneme Sınavları</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
                                 <DropdownMenuCheckboxItem
-                                    key={e}
-                                    checked={selectedExams.includes(e)}
-                                    onCheckedChange={() => handleExamChange(e)}
+                                    checked={selectedExams.length === exams.length && exams.length > 0}
+                                    onCheckedChange={() => handleExamChange('all')}
                                 >
-                                    {e}
+                                    Tüm Denemeler
                                 </DropdownMenuCheckboxItem>
-                            ))}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                                {exams.map(e => (
+                                    <DropdownMenuCheckboxItem
+                                        key={e}
+                                        checked={selectedExams.includes(e)}
+                                        onCheckedChange={() => handleExamChange(e)}
+                                    >
+                                        {e}
+                                    </DropdownMenuCheckboxItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
                     <Button onClick={handleGenerate} disabled={isGenerating || !selectedStudentNo || selectedExams.length === 0} className="w-full sm:w-auto">
                         {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BrainCircuit className="mr-2 h-4 w-4" />}
                         Rapor Oluştur
@@ -876,10 +840,10 @@ function ParentReport() {
                                         </CardContent>
                                     </Card>
                                     <Card className="border-orange-200 bg-orange-50/50 dark:bg-orange-900/20 dark:border-orange-800">
-                                        <CardHeader><CardTitle className="text-base font-semibold flex items-center gap-2 text-orange-800 dark:text-orange-300"><TrendingDown className="h-5 w-5"/> Destek Olabileceğimiz Alanlar</CardTitle></CardHeader>
+                                        <CardHeader><CardTitle className="text-base font-semibold flex items-center gap-2 text-orange-800 dark:text-orange-300"><AlertTriangle className="h-5 w-5"/> Destek Olabileceğimiz Alanlar</CardTitle></CardHeader>
                                         <CardContent>
                                             <ul className="space-y-2 text-sm text-orange-900 dark:text-orange-200">
-                                                {aiAnalysis.areasForImprovement.map((item, index) => <li key={index} className="flex items-start gap-2"><TrendingDown className="h-4 w-4 mt-0.5 text-orange-600 shrink-0"/><span>{item}</span></li>)}
+                                                {aiAnalysis.areasForImprovement.map((item, index) => <li key={index} className="flex items-start gap-2"><AlertTriangle className="h-4 w-4 mt-0.5 text-orange-600 shrink-0"/><span>{item}</span></li>)}
                                             </ul>
                                         </CardContent>
                                     </Card>
@@ -933,8 +897,8 @@ export default function ReportsPage() {
                 onClick={() => setActiveTab(type.id)}
             >
                 <CardHeader className="flex flex-row items-center gap-4 space-y-0 p-4">
-                    <div className="bg-muted p-3 rounded-lg">
-                        <type.icon className="h-6 w-6 text-primary" />
+                    <div className="bg-primary/10 text-primary p-3 rounded-lg">
+                        <type.icon className="h-6 w-6" />
                     </div>
                     <div>
                         <CardTitle className='text-base font-semibold'>{type.title}</CardTitle>

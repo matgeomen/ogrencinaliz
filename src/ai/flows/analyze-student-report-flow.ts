@@ -78,13 +78,13 @@ const prompt = ai.definePrompt({
   name: 'analyzeStudentReportPrompt',
   input: {schema: PromptInputSchema},
   output: {schema: AnalyzeStudentReportOutputSchema},
-  prompt: `Sen LGS konusunda uzman bir eğitim danışmanısın. Sana verilen öğrenci bilgilerini ve deneme sınavı sonuçlarını analiz ederek öğrencinin genel durumu hakkında detaylı bir rapor hazırla.
+  prompt: `Sen LGS konusunda uzman bir eğitim danışmanısın. Sana verilen öğrenci bilgilerini ve deneme sınavı sonuçlarını analiz ederek, doğrudan öğrenciye hitap eden, kişisel bir rapor hazırla.
 
 Rapor aşağıdaki gibi yapılandırılmalıdır:
-1.  **summary:** Öğrencinin genel akademik performansını, denemeler arasındaki değişimini ve genel potansiyelini özetleyen bir giriş paragrafı yaz. Sana verilen metin formatındaki sonuçları yorumlayarak başla.
-2.  **strengths:** Öğrencinin istikrarlı bir şekilde başarılı olduğu dersleri ve konuları vurgulayan 2-3 maddelik bir liste oluştur.
-3.  **areasForImprovement:** Öğrencinin zorlandığı, netlerinin düşük veya değişken olduğu dersleri tespit eden 2-3 maddelik bir liste oluştur. Özellikle LGS'de katsayısı yüksek olan derslerdeki (Matematik, Fen, Türkçe) duruma dikkat çek.
-4.  **roadmap:** Öğrencinin performansını artırmak için 3-5 adımlık somut ve uygulanabilir bir yol haritası oluştur. Her adım için bir 'title' ve 'description' alanı olmalıdır. Başlıklar kısa ve eyleme yönelik olmalı (örn: "Konu Tekrar Stratejisi", "Soru Çözüm Teknikleri").
+1.  **summary:** Genel akademik performansını, denemeler arasındaki değişimini ve genel potansiyelini özetleyen, motive edici bir giriş paragrafı yaz. Sana verilen metin formatındaki sonuçları yorumlayarak başla. "Sevgili {{{studentName}}}, eldeki verilere göre..." gibi kişisel bir başlangıç yap.
+2.  **strengths:** İstikrarlı bir şekilde başarılı olduğun dersleri ve konuları vurgulayan 2-3 maddelik bir liste oluştur. "Özellikle Türkçe dersindeki yüksek netlerin, okuduğunu anlama becerinin ne kadar gelişmiş olduğunu gösteriyor." gibi spesifik ve övücü ol.
+3.  **areasForImprovement:** Gelişmesi gereken, netlerinin düşük veya değişken olduğu dersleri tespit eden 2-3 maddelik bir liste oluştur. "Matematik dersinde bazı konularda zorlandığını görüyoruz, ancak düzenli tekrarla bu açığı kapatabilirsin." gibi yapıcı ve umut verici bir dil kullan. Özellikle LGS'de katsayısı yüksek olan derslerdeki (Matematik, Fen, Türkçe) duruma dikkat çek.
+4.  **roadmap:** Performansını artırmak için 3-4 adımlık somut ve uygulanabilir bir yol haritası oluştur. Her adım için bir 'title' ve 'description' alanı olmalıdır. Başlıklar kısa ve eyleme yönelik olmalı (örn: "Soru Çözüm Teknikleri", "Haftalık Tekrar Programı Oluşturma"). Açıklamalar net ve anlaşılır olmalı.
 
 Tüm metinleri profesyonel, yapıcı ve motive edici bir dille yaz.
 
@@ -110,5 +110,3 @@ const analyzeStudentReportFlow = ai.defineFlow(
     return output!;
   }
 );
-
-    

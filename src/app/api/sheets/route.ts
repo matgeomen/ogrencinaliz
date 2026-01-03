@@ -3,15 +3,8 @@ import { OAuth2Client } from 'google-auth-library';
 import { NextRequest, NextResponse } from 'next/server';
 import { StudentExamResult } from '@/types';
 
-// Bu değerleri ortam değişkenlerinden almalısınız.
-// `.env.local` dosyanıza ekleyin:
-// GOOGLE_SHEET_ID=...
-// GOOGLE_CLIENT_ID=...
-// GOOGLE_CLIENT_SECRET=...
-// GOOGLE_REDIRECT_URI=http://localhost:9002/api/auth/callback/google
-
 const SHEET_ID = process.env.GOOGLE_SHEET_ID || '';
-const SHEET_NAME = 'Sheet1'; // Veya verilerinizin olduğu sayfa adı
+const SHEET_NAME = 'Sheet1'; 
 
 async function getAuthClient(): Promise<OAuth2Client> {
     const oauth2Client = new OAuth2Client(
@@ -20,24 +13,16 @@ async function getAuthClient(): Promise<OAuth2Client> {
         process.env.GOOGLE_REDIRECT_URI
     );
 
-    // Normalde burada bir veritabanından veya dosyadan token alırsınız.
-    // Şimdilik, bu örnekte token'ı manuel olarak yönettiğimizi varsayalım.
-    // Gerçek bir uygulamada, ilk yetkilendirmeden sonra token'ı saklamanız gerekir.
-    // Örneğin, `/api/auth/google` ve `/api/auth/callback/google` rotaları oluşturup
-    // kullanıcıyı yetkilendirme sayfasına yönlendirip token'ı alabilirsiniz.
-    const tokens = {
-        // Bu token'ları OAuth2 akışından sonra elde etmelisiniz.
-        // access_token: '...',
-        // refresh_token: '...',
-        // expiry_date: ...
-    };
-    
-    // Bu örnekte, token'ların eksik olduğunu ve servisin çalışmayabileceğini unutmayın.
-    // Entegrasyonun tam çalışması için tam bir OAuth2 akışı uygulanmalıdır.
-    if (tokens) {
-        oauth2Client.setCredentials(tokens);
+    if (process.env.GOOGLE_REFRESH_TOKEN) {
+        oauth2Client.setCredentials({
+            refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
+            access_token: process.env.GOOGLE_ACCESS_TOKEN,
+            expiry_date: process.env.GOOGLE_TOKEN_EXPIRY ? parseInt(process.env.GOOGLE_TOKEN_EXPIRY) : null,
+        });
+    } else {
+        throw new Error("Google Refresh Token not found. Please authenticate through settings.");
     }
-
+    
     return oauth2Client;
 }
 
@@ -79,6 +64,10 @@ export async function GET(req: NextRequest) {
         const auth = await getAuthClient();
         const sheets = google.sheets({ version: 'v4', auth });
 
+        if (!SHEET_ID) {
+            throw new Error("GOOGLE_SHEET_ID is not defined in your environment.");
+        }
+
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SHEET_ID,
             range: `${SHEET_NAME}!A:Z`,
@@ -86,6 +75,7 @@ export async function GET(req: NextRequest) {
 
         const rows = response.data.values;
         if (!rows || rows.length === 0) {
+            // If the sheet is empty, return an empty array instead of erroring
             return NextResponse.json([]);
         }
 
@@ -110,7 +100,8 @@ export async function GET(req: NextRequest) {
                 }
             });
             return rowData as StudentExamResult;
-        }).filter(isStudentExamResult);
+        }).filter(row => row && typeof row === 'object' && Object.keys(row).length > 0) // Filter out empty rows
+          .filter(isStudentExamResult);
 
         return NextResponse.json(data);
     } catch (error: any) {
@@ -123,6 +114,10 @@ export async function POST(req: NextRequest) {
     try {
         const auth = await getAuthClient();
         const sheets = google.sheets({ version: 'v4', auth });
+        
+        if (!SHEET_ID) {
+            throw new Error("GOOGLE_SHEET_ID is not defined in your environment.");
+        }
 
         const body = await req.json();
         const data: StudentExamResult[] = body.data;
@@ -137,9 +132,14 @@ export async function POST(req: NextRequest) {
             range: SHEET_NAME,
         });
         
+        // If data is empty, we just cleared the sheet, so we're done.
+        if (data.length === 0) {
+             return NextResponse.json({ success: true, message: "Sheet cleared." });
+        }
+
         const values = [
             headerRow,
-            ...data.map(item => headerRow.map(key => item[key]))
+            ...data.map(item => headerRow.map(key => item[key] !== undefined ? item[key] : ""))
         ];
 
         const result = await sheets.spreadsheets.values.update({

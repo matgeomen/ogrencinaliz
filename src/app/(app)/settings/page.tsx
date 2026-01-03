@@ -33,6 +33,26 @@ export default function SettingsPage() {
         });
     }
 
+    const handleConnectGoogle = async () => {
+        try {
+            const response = await fetch('/api/auth/google');
+            const data = await response.json();
+            if (data.url) {
+                window.location.href = data.url;
+            } else {
+                throw new Error("Kimlik doğrulama URL'si alınamadı.");
+            }
+        } catch (error) {
+            console.error("Google'a bağlanırken hata:", error);
+            toast({
+                title: "Bağlantı Hatası",
+                description: "Google kimlik doğrulama sayfasına yönlendirilirken bir hata oluştu.",
+                variant: "destructive"
+            });
+        }
+    };
+
+
     if (!mounted) {
         return null;
     }
@@ -52,22 +72,22 @@ export default function SettingsPage() {
                         <CardDescription>Uygulamanın görünümünü özelleştirin.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <RadioGroup
+                         <RadioGroup
                             value={theme}
                             onValueChange={setTheme}
                             className="grid max-w-md grid-cols-3 gap-8 pt-2"
                         >
                             <Label className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
-                                <RadioGroupItem value="light" className="sr-only" />
+                                 <RadioGroupItem value="light" className="sr-only" />
                                 <Sun className="h-6 w-6" />
                                 <span className="mt-2">Açık</span>
                             </Label>
                             <Label className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
-                                <RadioGroupItem value="dark" className="sr-only" />
+                                 <RadioGroupItem value="dark" className="sr-only" />
                                 <Moon className="h-6 w-6" />
                                 <span className="mt-2">Koyu</span>
                             </Label>
-                            <Label className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
+                             <Label className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
                                 <RadioGroupItem value="system" className="sr-only" />
                                 <Laptop className="h-6 w-6" />
                                 <span className="mt-2">Sistem</span>
@@ -116,7 +136,7 @@ export default function SettingsPage() {
                                     <p className="text-sm text-muted-foreground">Bağlanmak için aşağıdaki bilgileri girin</p>
                                  </div>
                             </div>
-                            <Button><LinkIcon className="mr-2 h-4 w-4" /> Bağlan</Button>
+                            <Button onClick={handleConnectGoogle}><LinkIcon className="mr-2 h-4 w-4" /> Bağlan</Button>
                         </div>
 
                         <div className="space-y-4">

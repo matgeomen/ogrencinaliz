@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +18,15 @@ export default function SettingsPage() {
     const { theme, setTheme } = useTheme();
     const [showApiKey, setShowApiKey] = useState(false);
     const [showClientSecret, setShowClientSecret] = useState(false);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    if (!mounted) {
+        return null; // or a loading skeleton
+    }
 
     return (
         <div className="space-y-6">
@@ -35,7 +44,7 @@ export default function SettingsPage() {
                         <RadioGroup
                             value={theme}
                             onValueChange={setTheme}
-                            className="grid max-w-md grid-cols-2 gap-8 pt-2"
+                            className="grid max-w-md grid-cols-3 gap-8 pt-2"
                         >
                             <Label className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
                                 <RadioGroupItem value="light" className="sr-only" />
@@ -46,6 +55,11 @@ export default function SettingsPage() {
                                 <RadioGroupItem value="dark" className="sr-only" />
                                 <Moon className="h-6 w-6" />
                                 <span className="mt-2">Koyu</span>
+                            </Label>
+                            <Label className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
+                                <RadioGroupItem value="system" className="sr-only" />
+                                <Laptop className="h-6 w-6" />
+                                <span className="mt-2">Sistem</span>
                             </Label>
                         </RadioGroup>
                     </CardContent>
@@ -167,3 +181,4 @@ export default function SettingsPage() {
     );
 
     
+}

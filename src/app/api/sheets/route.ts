@@ -23,7 +23,6 @@ async function getAuthClient(): Promise<OAuth2Client> {
         throw new Error("Google Refresh Token not found. Please authenticate through settings.");
     }
     
-    // Ensure we have a valid access token
     await oauth2Client.getAccessToken();
 
     return oauth2Client;
@@ -71,6 +70,7 @@ export async function GET(req: NextRequest) {
 
         const header = rows[0] as (keyof StudentExamResult)[];
         const data = rows.slice(1).map(row => {
+            if (row.every(cell => cell === '')) return null; // Filter out completely empty rows
             const rowData: { [key: string]: any } = {};
             header.forEach((key, index) => {
                 const value = row[index];
@@ -88,7 +88,7 @@ export async function GET(req: NextRequest) {
                 }
             });
             return rowData;
-        }).filter(item => isStudentExamResult(item));
+        }).filter(item => item && isStudentExamResult(item));
 
         return NextResponse.json(data);
     } catch (error: any) {
@@ -116,18 +116,17 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Geçersiz veri formatı. Bir dizi bekleniyor.' }, { status: 400 });
         }
         
-        const values = [
-            headerRow,
-            ...data.map(item => headerRow.map(key => item[key] !== undefined ? item[key] : ""))
-        ];
-
-        // Clear the sheet before writing new data to prevent stale data
         await sheets.spreadsheets.values.clear({
             spreadsheetId: SHEET_ID,
             range: SHEET_NAME,
         });
 
         // If there's data to write (at least the header), write it.
+        const values = [
+            headerRow,
+            ...data.map(item => headerRow.map(key => item[key] !== undefined ? item[key] : ""))
+        ];
+        
         if (values.length > 0) {
             const result = await sheets.spreadsheets.values.update({
                 spreadsheetId: SHEET_ID,

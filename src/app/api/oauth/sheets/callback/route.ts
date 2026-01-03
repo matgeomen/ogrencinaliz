@@ -25,17 +25,27 @@ async function appendToEnvFile(updates: { key: string, value: string }[]) {
     
     updates.forEach(({ key, value }) => {
         const keyIndex = lines.findIndex(line => line.startsWith(`${key}=`));
+        const formattedValue = value.includes(' ') ? `"${value}"` : value;
         if (keyIndex !== -1) {
-            lines[keyIndex] = `${key}=${value}`;
+            lines[keyIndex] = `${key}=${formattedValue}`;
         } else {
-            lines.push(`${key}=${value}`);
+            lines.push(`${key}=${formattedValue}`);
         }
     });
 
-    // Remove any empty lines that might have been created
-    lines = lines.filter(line => line.trim() !== '');
+    const keysToUpdate = updates.map(u => u.key);
+    const existingKeys = lines.map(line => line.split('=')[0]);
+    keysToUpdate.forEach(key => {
+        if (!existingKeys.includes(key)) {
+            const update = updates.find(u => u.key === key);
+            if (update) {
+                const formattedValue = update.value.includes(' ') ? `"${update.value}"` : update.value;
+                lines.push(`${key}=${formattedValue}`);
+            }
+        }
+    });
     
-    await fs.writeFile(envPath, lines.join('\n'));
+    await fs.writeFile(envPath, lines.filter(Boolean).join('\n'));
 }
 
 
@@ -66,7 +76,6 @@ export async function GET(req: NextRequest) {
             await appendToEnvFile(updates);
         }
 
-        // Redirect back to settings page with success
         return NextResponse.redirect(new URL('/settings?success=true', req.url));
     } catch (error) {
         console.error('Error getting tokens:', error);

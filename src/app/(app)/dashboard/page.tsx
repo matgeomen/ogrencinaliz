@@ -8,7 +8,15 @@ import { Users, Target, CheckCircle, Award, FileText } from 'lucide-react';
 import { useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 
-const COLORS = ['#4CAF50', '#FFC107', '#F44336', '#2196F3'];
+const LESSON_COLORS = {
+  'Türkçe': '#5B57D2',
+  'Tarih': '#34B58A',
+  'Din': '#F5A623',
+  'İngilizce': '#D0021B',
+  'Matematik': '#4A90E2',
+  'Fen': '#7ED321',
+};
+
 
 export default function DashboardPage() {
   const { studentData, selectedExam, exams, loading } = useData();
@@ -44,18 +52,18 @@ export default function DashboardPage() {
 
      return lessons.map((lesson, index) => ({
         name: lessonNames[index],
-        'Ortalama Net': (examData.reduce((acc, s) => acc + s[`${lesson}_net`], 0) / total).toFixed(2),
+        'Ortalama Net': parseFloat((examData.reduce((acc, s) => acc + (s as any)[`${lesson}_net`], 0) / total).toFixed(2)),
      }));
   }, [examData]);
 
   const scoreDistribution = useMemo(() => {
     if (examData.length === 0) return [];
     const ranges = [
-      { name: '400-500', min: 400, max: 500.01, count: 0, color: '#3b82f6' },
-      { name: '300-400', min: 300, max: 400, count: 0, color: '#16a34a' },
-      { name: '200-300', min: 200, max: 300, count: 0, color: '#f97316' },
-      { name: '100-200', min: 100, max: 200, count: 0, color: '#ef4444' },
-      { name: '0-100', min: 0, max: 100, count: 0, color: '#dc2626' },
+      { name: '400-500', min: 400, max: 500.01, count: 0, color: '#5B57D2' },
+      { name: '300-400', min: 300, max: 400, count: 0, color: '#34B58A' },
+      { name: '200-300', min: 200, max: 300, count: 0, color: '#F5A623' },
+      { name: '100-200', min: 100, max: 200, count: 0, color: '#F8E71C' },
+      { name: '0-100', min: 0, max: 100, count: 0, color: '#D0021B' },
     ];
     examData.forEach(student => {
       const range = ranges.find(r => student.toplam_puan >= r.min && student.toplam_puan < r.max);
@@ -134,7 +142,11 @@ export default function DashboardPage() {
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey="Ortalama Net" fill="hsl(var(--primary))" />
+                <Bar dataKey="Ortalama Net">
+                  {lessonAverages.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={LESSON_COLORS[entry.name as keyof typeof LESSON_COLORS] || '#8884d8'} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </CardContent>

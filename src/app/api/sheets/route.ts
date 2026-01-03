@@ -16,8 +16,6 @@ async function getAuthClient(): Promise<OAuth2Client> {
     if (process.env.GOOGLE_REFRESH_TOKEN) {
         oauth2Client.setCredentials({
             refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
-            access_token: process.env.GOOGLE_ACCESS_TOKEN,
-            expiry_date: process.env.GOOGLE_TOKEN_EXPIRY ? parseInt(process.env.GOOGLE_TOKEN_EXPIRY) : null,
         });
     } else {
         throw new Error("Google Refresh Token not found. Please authenticate through settings.");
@@ -29,6 +27,7 @@ async function getAuthClient(): Promise<OAuth2Client> {
 
 function isStudentExamResult(obj: any): obj is StudentExamResult {
   return (
+    obj &&
     typeof obj.exam_name === 'string' &&
     typeof obj.date === 'string' &&
     typeof obj.class === 'string' &&
@@ -38,11 +37,23 @@ function isStudentExamResult(obj: any): obj is StudentExamResult {
     typeof obj.toplam_yanlis === 'number' &&
     typeof obj.toplam_net === 'number' &&
     typeof obj.toplam_puan === 'number' &&
+    typeof obj.turkce_d === 'number' &&
+    typeof obj.turkce_y === 'number' &&
     typeof obj.turkce_net === 'number' &&
+    typeof obj.tarih_d === 'number' &&
+    typeof obj.tarih_y === 'number' &&
     typeof obj.tarih_net === 'number' &&
+    typeof obj.din_d === 'number' &&
+    typeof obj.din_y === 'number' &&
     typeof obj.din_net === 'number' &&
+    typeof obj.ing_d === 'number' &&
+    typeof obj.ing_y === 'number' &&
     typeof obj.ing_net === 'number' &&
+    typeof obj.mat_d === 'number' &&
+    typeof obj.mat_y === 'number' &&
     typeof obj.mat_net === 'number' &&
+    typeof obj.fen_d === 'number' &&
+    typeof obj.fen_y === 'number' &&
     typeof obj.fen_net === 'number'
   );
 }
@@ -74,8 +85,8 @@ export async function GET(req: NextRequest) {
         });
 
         const rows = response.data.values;
-        if (!rows || rows.length === 0) {
-            // If the sheet is empty, return an empty array instead of erroring
+        if (!rows || rows.length <= 1) { // Check for header or empty
+            // If the sheet is empty or only has a header, return an empty array
             return NextResponse.json([]);
         }
 
@@ -84,7 +95,7 @@ export async function GET(req: NextRequest) {
             const rowData: Partial<StudentExamResult> = {};
             header.forEach((key, index) => {
                 const value = row[index];
-                if (value !== undefined && value !== null) {
+                if (value !== undefined && value !== null && value !== '') {
                     const numericKeys: (keyof StudentExamResult)[] = [
                         "student_no", "toplam_dogru", "toplam_yanlis", "toplam_net", 
                         "toplam_puan", "turkce_d", "turkce_y", "turkce_net",
@@ -99,9 +110,25 @@ export async function GET(req: NextRequest) {
                     }
                 }
             });
-            return rowData as StudentExamResult;
-        }).filter(row => row && typeof row === 'object' && Object.keys(row).length > 0) // Filter out empty rows
-          .filter(isStudentExamResult);
+            // Ensure all required fields have default values if not present
+            headerRow.forEach(key => {
+                if (rowData[key] === undefined) {
+                    const numericKeys: (keyof StudentExamResult)[] = [
+                        "student_no", "toplam_dogru", "toplam_yanlis", "toplam_net", "toplam_puan",
+                         "turkce_d", "turkce_y", "turkce_net", "tarih_d", "tarih_y", "tarih_net",
+                         "din_d", "din_y", "din_net", "ing_d", "ing_y", "ing_net", "mat_d", 
+                         "mat_y", "mat_net", "fen_d", "fen_y", "fen_net"
+                    ];
+                     if (numericKeys.includes(key)) {
+                        (rowData as any)[key] = 0;
+                     } else {
+                        (rowData as any)[key] = '';
+                     }
+                }
+            });
+
+            return rowData;
+        }).filter(row => row && isStudentExamResult(row)); // Filter out empty/invalid rows
 
         return NextResponse.json(data);
     } catch (error: any) {
@@ -134,7 +161,16 @@ export async function POST(req: NextRequest) {
         
         // If data is empty, we just cleared the sheet, so we're done.
         if (data.length === 0) {
-             return NextResponse.json({ success: true, message: "Sheet cleared." });
+             // We still need to write the header back
+             await sheets.spreadsheets.values.update({
+                spreadsheetId: SHEET_ID,
+                range: `${SHEET_NAME}!A1`,
+                valueInputOption: 'USER_ENTERED',
+                requestBody: {
+                    values: [headerRow],
+                },
+            });
+             return NextResponse.json({ success: true, message: "Sheet cleared and header restored." });
         }
 
         const values = [

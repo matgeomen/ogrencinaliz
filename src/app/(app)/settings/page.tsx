@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -25,6 +26,30 @@ export default function SettingsPage() {
                 description="Uygulama ayarlarını yönetin"
             />
             <div className="space-y-6 max-w-3xl">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Görünüm</CardTitle>
+                        <CardDescription>Uygulamanın görünümünü özelleştirin.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <RadioGroup
+                            value={theme}
+                            onValueChange={setTheme}
+                            className="grid max-w-md grid-cols-2 gap-8 pt-2"
+                        >
+                            <Label className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
+                                <RadioGroupItem value="light" className="sr-only" />
+                                <Sun className="h-6 w-6" />
+                                <span className="mt-2">Açık</span>
+                            </Label>
+                            <Label className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
+                                <RadioGroupItem value="dark" className="sr-only" />
+                                <Moon className="h-6 w-6" />
+                                <span className="mt-2">Koyu</span>
+                            </Label>
+                        </RadioGroup>
+                    </CardContent>
+                </Card>
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2"><KeyRound className="h-5 w-5"/> Yapay Zeka API Anahtarı</CardTitle>
@@ -140,4 +165,5 @@ export default function SettingsPage() {
             </div>
         </div>
     );
-}
+
+    

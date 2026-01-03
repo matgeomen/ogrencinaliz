@@ -57,7 +57,8 @@ export default function ProfilePage() {
                       </SelectTrigger>
                       <SelectContent>
                           <SelectItem value="local">Sadece Yerel (MongoDB)</SelectItem>
-                          <SelectItem value="cloud" disabled>Bulut Depolama (Yakında)</SelectItem>
+                          <SelectItem value="cloud">Sadece Bulut (Google Sheets)</SelectItem>
+                          <SelectItem value="both">Her İkisi</SelectItem>
                       </SelectContent>
                   </Select>
               </div>

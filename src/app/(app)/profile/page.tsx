@@ -1,19 +1,53 @@
 "use client"
 
+import { useCallback } from "react"
+import { useDropzone } from "react-dropzone"
 import { PageHeader } from "@/components/page-header"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Database, Save, User, Settings } from "lucide-react"
+import { Database, Save, User, Settings, UploadCloud } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { PlaceHolderImages } from "@/lib/placeholder-images"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import Link from "next/link"
+import { useData } from "@/contexts/data-context"
+import { useToast } from "@/hooks/use-toast"
 
 export default function ProfilePage() {
-  const profileAvatar = PlaceHolderImages.find(img => img.id === 'profile-avatar');
+  const { profileAvatar, setProfileAvatar } = useData();
+  const { toast } = useToast();
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    const file = acceptedFiles[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+        toast({
+          title: "Dosya Boyutu Çok Büyük",
+          description: "Lütfen 2MB'den küçük bir resim dosyası seçin.",
+          variant: "destructive",
+        });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setProfileAvatar(result);
+        toast({
+          title: "Profil Resmi Güncellendi",
+          description: "Yeni profil resminiz başarıyla yüklendi ve kaydedildi.",
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  }, [setProfileAvatar, toast]);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: { 'image/*': ['.jpeg', '.png', '.jpg', '.gif', '.webp'] },
+    multiple: false,
+  });
 
   return (
     <div className="space-y-6">
@@ -26,13 +60,18 @@ export default function ProfilePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><User className="h-5 w-5"/> Kişisel Bilgiler</CardTitle>
           </CardHeader>
-          <CardContent className="grid md:grid-cols-[120px_1fr] gap-8 items-start">
-              <div className="flex flex-col items-center gap-2 text-center">
-                  <Avatar className="h-32 w-32 cursor-pointer">
-                      {profileAvatar && <AvatarImage src={profileAvatar.imageUrl} alt="Profile Avatar" data-ai-hint={profileAvatar.imageHint}/>}
+          <CardContent className="grid md:grid-cols-[150px_1fr] gap-8 items-start">
+              <div {...getRootProps()} className="relative flex flex-col items-center gap-2 text-center cursor-pointer group">
+                  <Avatar className="h-36 w-36">
+                      <AvatarImage src={profileAvatar} alt="Profile Avatar"/>
                       <AvatarFallback>RH</AvatarFallback>
                   </Avatar>
-                  <p className="text-xs text-muted-foreground">Profil resminizi değiştirmek için üzerine tıklayın</p>
+                  <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                      <UploadCloud className="h-8 w-8 text-white"/>
+                      <p className="text-xs text-white mt-1">Değiştir</p>
+                  </div>
+                  <input {...getInputProps()} />
+                   <p className="text-xs text-muted-foreground mt-2">Profil resminizi değiştirmek için üzerine tıklayın.</p>
               </div>
               <div className="space-y-4">
                   <div className="space-y-2">

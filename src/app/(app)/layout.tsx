@@ -35,8 +35,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Button } from '@/components/ui/button';
-import { Icons } from '@/components/icons';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import {
   LayoutGrid,
   Users,
@@ -47,7 +45,8 @@ import {
   Upload,
   GraduationCap,
   BrainCircuit,
-  Database
+  Database,
+  Settings
 } from 'lucide-react';
 
 const navItems = [
@@ -63,8 +62,7 @@ const navItems = [
 ];
 
 function AppHeader() {
-  const { exams, selectedExam, setSelectedExam, loading } = useData();
-  const userAvatar = PlaceHolderImages.find(img => img.id === 'user-avatar');
+  const { exams, selectedExam, setSelectedExam, loading, profileAvatar } = useData();
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
@@ -94,7 +92,7 @@ function AppHeader() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-10 w-10 rounded-full">
               <Avatar className="h-10 w-10">
-                {userAvatar && <AvatarImage src={userAvatar.imageUrl} alt="User Avatar" data-ai-hint={userAvatar.imageHint} />}
+                 <AvatarImage src={profileAvatar} alt="User Avatar" />
                 <AvatarFallback>ÖT</AvatarFallback>
               </Avatar>
             </Button>
@@ -102,9 +100,9 @@ function AppHeader() {
           <DropdownMenuContent className="w-56" align="end" forceMount>
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">Öğretmen</p>
+                <p className="text-sm font-medium leading-none">Rıdvan Hoca</p>
                 <p className="text-xs leading-none text-muted-foreground">
-                  ogretmen@example.com
+                  ridvan.ozkan.183@gmail.com
                 </p>
               </div>
             </DropdownMenuLabel>
@@ -160,9 +158,16 @@ function AppSidebar() {
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter>
-         <div className="p-2 text-center text-xs text-muted-foreground">
-          LGS Öğrenci Takip Sistemi v1.0
-         </div>
+         <SidebarMenu>
+            <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname.startsWith('/settings')} tooltip="Ayarlar">
+                    <Link href="/settings">
+                        <Settings />
+                        <span>Ayarlar</span>
+                    </Link>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
   );

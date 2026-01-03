@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { StudentExamResult } from '@/types';
 import { mockStudentData } from '@/lib/mock-data';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 interface DataContextType {
   studentData: StudentExamResult[];
@@ -13,6 +14,8 @@ interface DataContextType {
   setSelectedExam: (examName: string) => void;
   classes: string[];
   loading: boolean;
+  profileAvatar: string;
+  setProfileAvatar: (url: string) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -21,16 +24,28 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [studentData, setStudentData] = useState<StudentExamResult[]>([]);
   const [selectedExam, setSelectedExam] = useState<string>('');
+  const [profileAvatar, setProfileAvatarState] = useState<string>('');
 
   useEffect(() => {
-    // Simulate loading from localStorage or a server
-    // In a real app, you might fetch this from an API or localStorage
+    // Load student data
     const storedData = localStorage.getItem('studentData');
     if (storedData) {
       setStudentData(JSON.parse(storedData));
     } else {
       setStudentData(mockStudentData);
     }
+    
+    // Load profile avatar
+    const storedAvatar = localStorage.getItem('profileAvatar');
+    if (storedAvatar) {
+        setProfileAvatarState(storedAvatar);
+    } else {
+        const defaultAvatar = PlaceHolderImages.find(img => img.id === 'user-avatar');
+        if (defaultAvatar) {
+            setProfileAvatarState(defaultAvatar.imageUrl);
+        }
+    }
+
     setLoading(false);
   }, []);
 
@@ -41,7 +56,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (studentData.length > 0) {
       localStorage.setItem('studentData', JSON.stringify(studentData));
       
-      // If the selected exam is no longer in the list of exams, reset it.
       if (selectedExam && !exams.includes(selectedExam)) {
         setSelectedExam(exams[0] || '');
       } else if (!selectedExam && exams.length > 0) {
@@ -49,7 +63,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
     }
   }, [studentData, selectedExam, exams]);
-
+  
+  const setProfileAvatar = (url: string) => {
+    setProfileAvatarState(url);
+    localStorage.setItem('profileAvatar', url);
+  }
 
   const addStudentData = (newData: StudentExamResult[]) => {
     setStudentData(prevData => {
@@ -79,6 +97,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setSelectedExam,
     classes,
     loading,
+    profileAvatar,
+    setProfileAvatar,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

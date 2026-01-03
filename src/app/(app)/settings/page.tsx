@@ -1,17 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import { useTheme } from "next-themes";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Sun, KeyRound, ExternalLink, Trash2, Eye, EyeOff } from "lucide-react";
+import { Sun, KeyRound, ExternalLink, Trash2, Eye, EyeOff, Moon, Laptop } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 export default function SettingsPage() {
+    const { theme, setTheme } = useTheme();
     const [showOpenAiKey, setShowOpenAiKey] = useState(false);
 
     return (
@@ -26,13 +28,27 @@ export default function SettingsPage() {
                         <CardTitle className="flex items-center gap-2"><Sun className="h-5 w-5"/> Görünüm</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <Label htmlFor="dark-mode" className="font-medium">Karanlık Mod</Label>
-                                <p className="text-sm text-muted-foreground">Göz yorgunluğunu azaltın</p>
-                            </div>
-                            <Switch id="dark-mode" />
-                        </div>
+                         <RadioGroup
+                            value={theme}
+                            onValueChange={setTheme}
+                            className="grid grid-cols-3 gap-8 pt-2"
+                        >
+                            <Label className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
+                                <RadioGroupItem value="light" id="light" className="sr-only" />
+                                <Sun className="mb-3 h-6 w-6" />
+                                Açık
+                            </Label>
+                            <Label className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
+                                <RadioGroupItem value="dark" id="dark" className="sr-only" />
+                                <Moon className="mb-3 h-6 w-6" />
+                                Koyu
+                            </Label>
+                             <Label className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
+                                <RadioGroupItem value="system" id="system" className="sr-only" />
+                                <Laptop className="mb-3 h-6 w-6" />
+                                Sistem
+                            </Label>
+                        </RadioGroup>
                     </CardContent>
                 </Card>
 

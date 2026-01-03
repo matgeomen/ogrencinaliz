@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo, useState } from 'react';
@@ -48,15 +47,12 @@ export default function RankingsPage() {
         if (aValue > bValue) {
           return sortConfig.direction === 'ascending' ? 1 : -1;
         }
-        // If scores are equal, sort by name
         return a.student_name.localeCompare(b.student_name);
       });
     }
     
-    // Add rank after sorting by a numeric value
     let rankedData = sortableItems.map((item, index) => ({ ...item, rank: index + 1 }));
 
-    // Now, if sorting by rank, class, or name, apply it
     if (sortConfig.key === 'rank' || sortConfig.key === 'class' || sortConfig.key === 'student_name') {
         rankedData.sort((a,b) => {
             const aValue = a[sortConfig.key];
@@ -90,7 +86,7 @@ export default function RankingsPage() {
         key={column.key}
         className={column.key.toString().includes('net') || column.key.toString().includes('puan') ? "text-right" : ""}
     >
-        <Button variant="ghost" onClick={() => requestSort(column.key)} className="px-2">
+        <Button variant="ghost" onClick={() => requestSort(column.key)} className="px-2 whitespace-nowrap">
             {column.label}
             <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
@@ -98,55 +94,57 @@ export default function RankingsPage() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full" style={{ maxWidth: '100%', overflowX: 'hidden' }}>
       <PageHeader title="Sıralamalar" description={selectedExam ? `"${selectedExam}" denemesi sıralaması` : "Genel sıralamalar"} />
 
-      <Card>
-        <CardContent className="pt-6">
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                    {sortableColumns.map(col => renderSortableHeader(col))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                [...Array(10)].map((_, i) => (
-                    <TableRow key={i}>
-                    <TableCell colSpan={sortableColumns.length}><Skeleton className="h-8" /></TableCell>
-                    </TableRow>
-                ))
-                ) : sortedData.length > 0 ? (
-                sortedData.map((student, index) => (
-                    <TableRow key={student.student_no}>
-                        <TableCell>
-                            <div className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">{student.rank}</div>
-                        </TableCell>
-                        <TableCell className="font-medium max-w-40">
-                            <div className="truncate" title={student.student_name}>{student.student_name}</div>
-                            <div className="text-xs text-muted-foreground">{student.student_no}</div>
-                        </TableCell>
-                        <TableCell>{student.class}</TableCell>
-                        <TableCell className="text-right">{student.toplam_net.toFixed(2)}</TableCell>
-                        <TableCell className="text-right font-semibold text-primary">{student.toplam_puan.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">{student.turkce_net.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">{student.mat_net.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">{student.fen_net.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">{student.tarih_net.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">{student.din_net.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">{student.ing_net.toFixed(2)}</TableCell>
-                    </TableRow>
-                ))
-                ) : (
-                <TableRow>
-                    <TableCell colSpan={sortableColumns.length} className="h-24 text-center">
-                    Sıralama için veri bulunamadı. Lütfen bir deneme seçin.
-                    </TableCell>
-                </TableRow>
-                )}
-              </TableBody>
-            </Table>
+      <Card className="w-full" style={{ maxWidth: '100%' }}>
+        <CardContent className="pt-6 w-full overflow-hidden">
+          <div className="w-full overflow-x-auto -mx-6 px-6" style={{ maxWidth: 'calc(100vw - 300px)' }}>
+            <div className="rounded-md border inline-block min-w-full">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                      {sortableColumns.map(col => renderSortableHeader(col))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                  [...Array(10)].map((_, i) => (
+                      <TableRow key={i}>
+                      <TableCell colSpan={sortableColumns.length}><Skeleton className="h-8" /></TableCell>
+                      </TableRow>
+                  ))
+                  ) : sortedData.length > 0 ? (
+                  sortedData.map((student) => (
+                      <TableRow key={student.student_no}>
+                          <TableCell className="whitespace-nowrap">
+                              <div className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">{student.rank}</div>
+                          </TableCell>
+                          <TableCell className="font-medium max-w-[200px]">
+                              <div className="truncate" title={student.student_name}>{student.student_name}</div>
+                              <div className="text-xs text-muted-foreground">{student.student_no}</div>
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">{student.class}</TableCell>
+                          <TableCell className="text-right whitespace-nowrap">{student.toplam_net.toFixed(2)}</TableCell>
+                          <TableCell className="text-right font-semibold text-primary whitespace-nowrap">{student.toplam_puan.toFixed(2)}</TableCell>
+                          <TableCell className="text-right whitespace-nowrap">{student.turkce_net.toFixed(2)}</TableCell>
+                          <TableCell className="text-right whitespace-nowrap">{student.mat_net.toFixed(2)}</TableCell>
+                          <TableCell className="text-right whitespace-nowrap">{student.fen_net.toFixed(2)}</TableCell>
+                          <TableCell className="text-right whitespace-nowrap">{student.tarih_net.toFixed(2)}</TableCell>
+                          <TableCell className="text-right whitespace-nowrap">{student.din_net.toFixed(2)}</TableCell>
+                          <TableCell className="text-right whitespace-nowrap">{student.ing_net.toFixed(2)}</TableCell>
+                      </TableRow>
+                  ))
+                  ) : (
+                  <TableRow>
+                      <TableCell colSpan={sortableColumns.length} className="h-24 text-center">
+                      Sıralama için veri bulunamadı. Lütfen bir deneme seçin.
+                      </TableCell>
+                  </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </CardContent>
       </Card>

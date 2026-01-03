@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Database, Save, User } from "lucide-react"
+import { Database, Save, User, Settings } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { PlaceHolderImages } from "@/lib/placeholder-images"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 export default function ProfilePage() {
   const profileAvatar = PlaceHolderImages.find(img => img.id === 'profile-avatar');
@@ -51,7 +52,7 @@ export default function ProfilePage() {
           <CardContent className="max-w-md space-y-4">
                <div className="space-y-2">
                   <Label htmlFor="storage">Depolama Tercihi</Label>
-                  <Select defaultValue="local">
+                  <Select defaultValue="cloud">
                       <SelectTrigger id="storage">
                           <SelectValue />
                       </SelectTrigger>
@@ -62,6 +63,16 @@ export default function ProfilePage() {
                       </SelectContent>
                   </Select>
               </div>
+              <Alert variant="default" className="bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800">
+                <AlertTitle className="font-semibold text-yellow-800 dark:text-yellow-300">Google Sheets Kurulumu:</AlertTitle>
+                <AlertDescription className="text-yellow-700 dark:text-yellow-300/80 text-sm mt-1">
+                  Bulut depolama için Ayarlar sayfasından bağlantı yapın.
+                </AlertDescription>
+                <Button variant="outline" size="sm" className="mt-3">
+                  <Settings className="mr-2 h-4 w-4"/>
+                  Ayarlara Git
+                </Button>
+              </Alert>
           </CardContent>
         </Card>
 

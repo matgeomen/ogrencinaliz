@@ -57,7 +57,7 @@ export default function SettingsPage() {
         return null;
     }
 
-    const radioGroupValue = theme === 'premium' ? resolvedTheme : theme;
+    const radioGroupValue = theme;
 
     return (
         <div className="space-y-6">
@@ -73,7 +73,7 @@ export default function SettingsPage() {
                     </CardHeader>
                     <CardContent>
                          <RadioGroup
-                            value={theme}
+                            value={radioGroupValue}
                             onValueChange={setTheme}
                             className="grid max-w-md grid-cols-3 gap-8 pt-2"
                         >
@@ -169,15 +169,24 @@ export default function SettingsPage() {
                         <Alert variant="default" className="bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800">
                           <AlertTitle className="text-yellow-800 dark:text-yellow-300 font-semibold">Google Sheets Kurulumu:</AlertTitle>
                           <AlertDescription className="text-yellow-700 dark:text-yellow-300/80 text-sm">
-                            <ol className="list-decimal list-inside space-y-1 mt-2">
-                                <li><a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="underline font-medium hover:text-yellow-800">Google Cloud Console'a</a> gidin</li>
-                                <li>Yeni proje oluşturun</li>
-                                <li>Google Sheets API'yi etkinleştirin</li>
-                                <li>OAuth 2.0 kimlik bilgileri oluşturun</li>
-                                <li>Authorized redirect URI olarak ekleyin:
-                                    <code className="block my-1 p-2 bg-yellow-100 dark:bg-yellow-800/50 rounded text-xs">https://student-progress-28.preview.emergentagent.com/api/oauth/sheets/callback</code>
+                            <ol className="list-decimal list-inside space-y-2 mt-2">
+                                <li><a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="underline font-medium hover:text-yellow-800">Google Cloud Console'a</a> gidin ve yeni bir proje oluşturun.</li>
+                                <li>Kenar çubuğundan <span className="font-semibold">"APIs & Services"</span>'e gidin ve Google Sheets API'yi aratıp etkinleştirin (<span className="font-semibold">ENABLE</span>).</li>
+                                <li>
+                                    <a href="https://console.cloud.google.com/apis/credentials/consent" target="_blank" rel="noopener noreferrer" className="underline font-medium hover:text-yellow-800">OAuth izin ekranını</a> yapılandırın:
+                                    <ul className="list-disc list-inside pl-4 mt-1">
+                                        <li>Kullanıcı Tipi olarak <span className="font-semibold">"Harici" (External)</span> seçin.</li>
+                                        <li>Uygulama adı, kullanıcı desteği e-postası gibi gerekli bilgileri doldurun.</li>
+                                        <li>Kapsamları (Scopes) atlayın.</li>
+                                        <li><span className="font-semibold">"Test kullanıcıları"</span> bölümüne kendi Google e-posta adresinizi ekleyin.</li>
+                                    </ul>
                                 </li>
-                                <li>Client ID ve Secret'ı yukarıya girin</li>
+                                <li><span className="font-semibold">"Credentials"</span> sekmesinde, <span className="font-semibold">"+ CREATE CREDENTIALS"</span> ile <span className="font-semibold">"OAuth client ID"</span> oluşturun.</li>
+                                <li>
+                                    <span className="font-semibold">"Authorized redirect URIs"</span> bölümüne şunu ekleyin:
+                                    <code className="block my-1 p-2 bg-yellow-100 dark:bg-yellow-800/50 rounded text-xs break-all">https://student-progress-28.preview.emergentagent.com/api/oauth/sheets/callback</code>
+                                </li>
+                                <li>Oluşturulan Client ID ve Secret'ı yukarıdaki alanlara girin ve kaydedin.</li>
                             </ol>
                           </AlertDescription>
                         </Alert>
@@ -213,3 +222,5 @@ export default function SettingsPage() {
 
     
 }
+
+    

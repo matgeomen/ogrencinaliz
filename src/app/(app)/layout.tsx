@@ -109,7 +109,9 @@ function AppHeader() {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Profil</DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/profile">Profil</Link>
+            </DropdownMenuItem>
             <DropdownMenuItem>Ayarlar</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem>Çıkış Yap</DropdownMenuItem>
@@ -157,7 +159,7 @@ function AppSidebar() {
       </SidebarContent>
       <SidebarFooter>
          <div className="p-2 text-center text-xs text-muted-foreground">
-          Öğrenci Takip Sistemi v1.0
+          LGS Öğrenci Takip Sistemi v1.0
          </div>
       </SidebarFooter>
     </Sidebar>

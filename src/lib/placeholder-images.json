@@ -5,6 +5,12 @@
       "description": "User avatar placeholder",
       "imageUrl": "https://images.unsplash.com/photo-1664382953518-4a664ab8a8c9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHx0ZWFjaGVyfGVufDB8fHx8MTc2NzI2NjQyNnww&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "teacher"
+    },
+    {
+      "id": "profile-avatar",
+      "description": "Profile page avatar placeholder",
+      "imageUrl": "https://images.unsplash.com/photo-1741512612500-06e4716a6473?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8Y2FydG9vbiUyMGJveXxlbnwwfHx8fDE3Njc0NjMyNDZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "cartoon boy"
     }
   ]
 }

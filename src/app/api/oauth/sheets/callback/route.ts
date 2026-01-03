@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { google } from 'googleapis';
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs/promises';
@@ -9,7 +10,7 @@ const OAUTH2_CLIENT = new google.auth.OAuth2(
     process.env.GOOGLE_REDIRECT_URI
 );
 
-async function appendToEnvFile(key: string, value: string) {
+async function appendToEnvFile(updates: { key: string, value: string }[]) {
     const envPath = path.resolve(process.cwd(), '.env');
     let envFileContent = '';
     try {
@@ -20,11 +21,21 @@ async function appendToEnvFile(key: string, value: string) {
         }
     }
 
-    const lines = envFileContent.split('\n');
-    const newLines = lines.filter(line => !line.startsWith(`${key}=`));
-    newLines.push(`${key}=${value}`);
+    let lines = envFileContent.split('\n');
     
-    await fs.writeFile(envPath, newLines.join('\n'));
+    updates.forEach(({ key, value }) => {
+        const keyIndex = lines.findIndex(line => line.startsWith(`${key}=`));
+        if (keyIndex !== -1) {
+            lines[keyIndex] = `${key}=${value}`;
+        } else {
+            lines.push(`${key}=${value}`);
+        }
+    });
+
+    // Remove any empty lines that might have been created
+    lines = lines.filter(line => line.trim() !== '');
+    
+    await fs.writeFile(envPath, lines.join('\n'));
 }
 
 
@@ -33,31 +44,32 @@ export async function GET(req: NextRequest) {
     const code = searchParams.get('code');
 
     if (typeof code !== 'string') {
-        return NextResponse.redirect(new URL('/settings?error=true', req.url));
+        return NextResponse.redirect(new URL('/settings?error=auth_failed', req.url));
     }
 
     try {
         const { tokens } = await OAUTH2_CLIENT.getToken(code);
         
+        const updates: { key: string, value: string }[] = [];
+
         if (tokens.refresh_token) {
-            // In a real app, you'd save this to a secure database associated with the user
-            // For this example, we'll save it to a .env file (NOT recommended for production)
-            await appendToEnvFile('GOOGLE_REFRESH_TOKEN', tokens.refresh_token);
+            updates.push({ key: 'GOOGLE_REFRESH_TOKEN', value: tokens.refresh_token });
+        }
+        if (tokens.access_token) {
+            updates.push({ key: 'GOOGLE_ACCESS_TOKEN', value: tokens.access_token });
+        }
+        if (tokens.expiry_date) {
+            updates.push({ key: 'GOOGLE_TOKEN_EXPIRY', value: tokens.expiry_date.toString() });
         }
 
-         if (tokens.access_token) {
-            await appendToEnvFile('GOOGLE_ACCESS_TOKEN', tokens.access_token);
-         }
-         
-         if (tokens.expiry_date) {
-            await appendToEnvFile('GOOGLE_TOKEN_EXPIRY', tokens.expiry_date.toString());
-         }
-
+        if(updates.length > 0) {
+            await appendToEnvFile(updates);
+        }
 
         // Redirect back to settings page with success
         return NextResponse.redirect(new URL('/settings?success=true', req.url));
     } catch (error) {
         console.error('Error getting tokens:', error);
-        return NextResponse.redirect(new URL('/settings?error=true', req.url));
+        return NextResponse.redirect(new URL('/settings?error=token_exchange_failed', req.url));
     }
 }

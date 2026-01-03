@@ -14,14 +14,18 @@ async function getAuthClient(): Promise<OAuth2Client> {
         process.env.GOOGLE_REDIRECT_URI
     );
 
-    if (process.env.GOOGLE_REFRESH_TOKEN) {
+    const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
+    if (refreshToken) {
         oauth2Client.setCredentials({
-            refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
+            refresh_token: refreshToken,
         });
     } else {
         throw new Error("Google Refresh Token not found. Please authenticate through settings.");
     }
     
+    // Ensure we have a valid access token
+    await oauth2Client.getAccessToken();
+
     return oauth2Client;
 }
 
@@ -37,17 +41,23 @@ const headerRow: (keyof StudentExamResult)[] = [
 ];
 
 function isStudentExamResult(obj: any): obj is StudentExamResult {
-  return obj && typeof obj.student_no === 'number' && typeof obj.student_name === 'string';
+  return obj && 
+         typeof obj.student_no === 'number' && !isNaN(obj.student_no) &&
+         typeof obj.student_name === 'string' && obj.student_name.trim() !== '' &&
+         typeof obj.exam_name === 'string' && obj.exam_name.trim() !== '';
 }
 
 export async function GET(req: NextRequest) {
     try {
-        const auth = await getAuthClient();
-        const sheets = google.sheets({ version: 'v4', auth });
-
+        if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+            throw new Error("Google client credentials are not defined in your environment.");
+        }
         if (!SHEET_ID) {
             throw new Error("GOOGLE_SHEET_ID is not defined in your environment.");
         }
+
+        const auth = await getAuthClient();
+        const sheets = google.sheets({ version: 'v4', auth });
 
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SHEET_ID,
@@ -64,7 +74,7 @@ export async function GET(req: NextRequest) {
             const rowData: { [key: string]: any } = {};
             header.forEach((key, index) => {
                 const value = row[index];
-                const numericKeys: string[] = [
+                const numericKeys: (keyof StudentExamResult)[] = [
                     "student_no", "toplam_dogru", "toplam_yanlis", "toplam_net", "toplam_puan",
                     "turkce_d", "turkce_y", "turkce_net", "tarih_d", "tarih_y", "tarih_net",
                     "din_d", "din_y", "din_net", "ing_d", "ing_y", "ing_net", "mat_d", 
@@ -77,7 +87,7 @@ export async function GET(req: NextRequest) {
                     rowData[key] = value || '';
                 }
             });
-            return rowData as StudentExamResult;
+            return rowData;
         }).filter(item => isStudentExamResult(item));
 
         return NextResponse.json(data);
@@ -89,12 +99,15 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
     try {
-        const auth = await getAuthClient();
-        const sheets = google.sheets({ version: 'v4', auth });
-        
-        if (!SHEET_ID) {
+        if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+            throw new Error("Google client credentials are not defined in your environment.");
+        }
+         if (!SHEET_ID) {
             throw new Error("GOOGLE_SHEET_ID is not defined in your environment.");
         }
+
+        const auth = await getAuthClient();
+        const sheets = google.sheets({ version: 'v4', auth });
 
         const body = await req.json();
         const data: StudentExamResult[] = body.data;
@@ -102,28 +115,33 @@ export async function POST(req: NextRequest) {
         if (!Array.isArray(data)) {
             return NextResponse.json({ error: 'Geçersiz veri formatı. Bir dizi bekleniyor.' }, { status: 400 });
         }
+        
+        const values = [
+            headerRow,
+            ...data.map(item => headerRow.map(key => item[key] !== undefined ? item[key] : ""))
+        ];
 
-        // Clear the sheet first
+        // Clear the sheet before writing new data to prevent stale data
         await sheets.spreadsheets.values.clear({
             spreadsheetId: SHEET_ID,
             range: SHEET_NAME,
         });
+
+        // If there's data to write (at least the header), write it.
+        if (values.length > 0) {
+            const result = await sheets.spreadsheets.values.update({
+                spreadsheetId: SHEET_ID,
+                range: `${SHEET_NAME}!A1`,
+                valueInputOption: 'USER_ENTERED',
+                requestBody: {
+                    values: values,
+                },
+            });
+            return NextResponse.json({ success: true, updatedRange: result.data.updatedRange });
+        }
         
-        const values = [
-            headerRow,
-            ...data.map(item => headerRow.map(key => item[key]))
-        ];
+        return NextResponse.json({ success: true, message: "Sheet cleared, no data to write." });
 
-        const result = await sheets.spreadsheets.values.update({
-            spreadsheetId: SHEET_ID,
-            range: `${SHEET_NAME}!A1`,
-            valueInputOption: 'USER_ENTERED',
-            requestBody: {
-                values: values,
-            },
-        });
-
-        return NextResponse.json({ success: true, updatedRange: result.data.updatedRange });
     } catch (error: any) {
         console.error('Google Sheets API POST Error:', error.message);
         return NextResponse.json({ error: 'Google Sheets\'e yazılırken bir hata oluştu.', details: error.message }, { status: 500 });

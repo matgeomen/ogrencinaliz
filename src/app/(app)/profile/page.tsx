@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast"
 import { firebaseConfig as initialFirebaseConfig } from "@/firebase/config"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useFirebase } from "@/firebase"
+import { cn } from "@/lib/utils"
 
 type StoragePreference = 'local' | 'cloud' | 'both';
 

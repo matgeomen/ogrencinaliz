@@ -1,35 +1,40 @@
 import 'dotenv/config';
-import { google } from 'googleapis';
-import { OAuth2Client } from 'google-auth-library';
 import { NextRequest, NextResponse } from 'next/server';
 import { StudentExamResult } from '@/types';
 
+const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+const REFRESH_TOKEN = process.env.GOOGLE_REFRESH_TOKEN;
 const SHEET_ID = process.env.GOOGLE_SHEET_ID || '';
 const SHEET_NAME = 'Sheet1'; 
 
-async function getAuthClient(): Promise<OAuth2Client> {
-    const oauth2Client = new OAuth2Client(
-        process.env.GOOGLE_CLIENT_ID,
-        process.env.GOOGLE_CLIENT_SECRET,
-        process.env.GOOGLE_REDIRECT_URI
-    );
-
-    const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
-    if (refreshToken) {
-        oauth2Client.setCredentials({
-            refresh_token: refreshToken,
-        });
-    } else {
-        throw new Error("Google Refresh Token not found. Please authenticate through settings.");
+async function getAccessToken(): Promise<string> {
+    if (!CLIENT_ID || !CLIENT_SECRET || !REFRESH_TOKEN) {
+        throw new Error("Google credentials (Client ID, Secret, Refresh Token) must be configured.");
     }
     
-    // Refresh the access token to ensure it's valid
-    await oauth2Client.getAccessToken();
+    const response = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            client_id: CLIENT_ID,
+            client_secret: CLIENT_SECRET,
+            refresh_token: REFRESH_TOKEN,
+            grant_type: 'refresh_token',
+        }),
+    });
 
-    return oauth2Client;
+    const data = await response.json();
+    if (!response.ok) {
+        console.error("Token refresh failed:", data);
+        throw new Error(data.error_description || 'Failed to refresh access token.');
+    }
+    return data.access_token;
 }
 
-const headerRow: (keyof StudentExamResult)[] = [
+const headerRow: string[] = [
     "exam_name", "date", "class", "student_no", "student_name", 
     "toplam_dogru", "toplam_yanlis", "toplam_net", "toplam_puan",
     "turkce_d", "turkce_y", "turkce_net",
@@ -49,33 +54,37 @@ function isStudentExamResult(obj: any): obj is StudentExamResult {
 
 export async function GET(req: NextRequest) {
     try {
-        if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-            throw new Error("Google client credentials are not defined in your environment.");
-        }
         if (!SHEET_ID) {
             throw new Error("GOOGLE_SHEET_ID is not defined in your environment.");
         }
 
-        const auth = await getAuthClient();
-        const sheets = google.sheets({ version: 'v4', auth });
+        const accessToken = await getAccessToken();
+        const range = `${SHEET_NAME}!A:Z`;
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${range}`;
 
-        const response = await sheets.spreadsheets.values.get({
-            spreadsheetId: SHEET_ID,
-            range: `${SHEET_NAME}!A:Z`,
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+            },
         });
 
-        const rows = response.data.values;
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error?.message || 'Failed to fetch from Google Sheets.');
+        }
+
+        const rows = data.values;
         if (!rows || rows.length <= 1) {
             return NextResponse.json([]);
         }
 
-        const header = rows[0] as (keyof StudentExamResult)[];
-        const data = rows.slice(1).map(row => {
-            if (row.every(cell => cell === '')) return null; // Filter out completely empty rows
+        const header = rows[0] as string[];
+        const jsonData = rows.slice(1).map((row: string[]) => {
+            if (row.every(cell => cell === '')) return null;
             const rowData: { [key: string]: any } = {};
             header.forEach((key, index) => {
-                const value = row[index];
-                const numericKeys: (keyof StudentExamResult)[] = [
+                 const value = row[index];
+                 const numericKeys = [
                     "student_no", "toplam_dogru", "toplam_yanlis", "toplam_net", "toplam_puan",
                     "turkce_d", "turkce_y", "turkce_net", "tarih_d", "tarih_y", "tarih_net",
                     "din_d", "din_y", "din_net", "ing_d", "ing_y", "ing_net", "mat_d", 
@@ -89,9 +98,9 @@ export async function GET(req: NextRequest) {
                 }
             });
             return rowData;
-        }).filter(item => item && isStudentExamResult(item));
+        }).filter((item: any) => item && isStudentExamResult(item));
 
-        return NextResponse.json(data);
+        return NextResponse.json(jsonData);
     } catch (error: any) {
         console.error('Google Sheets API GET Error:', error);
         return NextResponse.json({ error: 'Google Sheets verileri okunurken bir hata oluştu.', details: error.message }, { status: 500 });
@@ -100,16 +109,11 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
     try {
-        if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-            throw new Error("Google client credentials are not defined in your environment.");
-        }
-         if (!SHEET_ID) {
+        if (!SHEET_ID) {
             throw new Error("GOOGLE_SHEET_ID is not defined in your environment.");
         }
 
-        const auth = await getAuthClient();
-        const sheets = google.sheets({ version: 'v4', auth });
-
+        const accessToken = await getAccessToken();
         const body = await req.json();
         const data: StudentExamResult[] = body.data;
 
@@ -117,26 +121,35 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Geçersiz veri formatı. Bir dizi bekleniyor.' }, { status: 400 });
         }
         
-        await sheets.spreadsheets.values.clear({
-            spreadsheetId: SHEET_ID,
-            range: SHEET_NAME,
+        // Clear the sheet
+        const clearUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}:clear`;
+        await fetch(clearUrl, {
+             method: 'POST',
+             headers: { 'Authorization': `Bearer ${accessToken}` }
         });
 
-        // If there's data to write (at least the header), write it.
+        // Write new data
         const values = [
             headerRow,
-            ...data.map(item => headerRow.map(key => item[key] !== undefined ? item[key] : ""))
+            ...data.map(item => headerRow.map(key => (item as any)[key] !== undefined ? (item as any)[key] : ""))
         ];
         
-        const result = await sheets.spreadsheets.values.update({
-            spreadsheetId: SHEET_ID,
-            range: `${SHEET_NAME}!A1`,
-            valueInputOption: 'USER_ENTERED',
-            requestBody: {
-                values: values,
+        const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}!A1?valueInputOption=USER_ENTERED`;
+        const result = await fetch(updateUrl, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
             },
+            body: JSON.stringify({ values }),
         });
-        return NextResponse.json({ success: true, updatedRange: result.data.updatedRange });
+
+        const resultData = await result.json();
+        if (!result.ok) {
+            throw new Error(resultData.error?.message || 'Failed to write to Google Sheets.');
+        }
+
+        return NextResponse.json({ success: true, updatedRange: resultData.updatedRange });
 
     } catch (error: any) {
         console.error('Google Sheets API POST Error:', error);

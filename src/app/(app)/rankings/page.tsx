@@ -94,13 +94,12 @@ export default function RankingsPage() {
   );
 
   return (
-    <div className="space-y-6 w-full" style={{ maxWidth: '100%', overflowX: 'hidden' }}>
+    <div className="space-y-6 w-full">
       <PageHeader title="Sıralamalar" description={selectedExam ? `"${selectedExam}" denemesi sıralaması` : "Genel sıralamalar"} />
 
-      <Card className="w-full" style={{ maxWidth: '100%' }}>
-        <CardContent className="pt-6 w-full overflow-hidden">
-          <div className="w-full overflow-x-auto -mx-6 px-6" style={{ maxWidth: 'calc(100vw - 300px)' }}>
-            <div className="rounded-md border inline-block min-w-full">
+      <Card className="w-full">
+        <CardContent className="pt-6">
+            <div className="rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -145,7 +144,6 @@ export default function RankingsPage() {
                 </TableBody>
               </Table>
             </div>
-          </div>
         </CardContent>
       </Card>
     </div>

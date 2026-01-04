@@ -889,7 +889,7 @@ export default function ReportsPage() {
     <div className="space-y-6">
       <PageHeader title="Raporlar" description="AI destekli öğrenci ve sınıf raporları" className="no-print" />
 
-      <div className="grid gap-4 md:grid-cols-3 no-print">
+      <div className="grid gap-4 sm:grid-cols-3 no-print">
         {reportTypes.map(type => (
             <Card 
                 key={type.id} 

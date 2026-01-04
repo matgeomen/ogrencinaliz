@@ -479,5 +479,3 @@ export default function AiAnalysisPage() {
     </div>
   );
 }
-
-    

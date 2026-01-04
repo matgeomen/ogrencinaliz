@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Database, Save, User, UploadCloud, Info, Wifi, WifiOff, CloudCog } from "lucide-react"
+import { Database, Save, User, UploadCloud, Info, Wifi, WifiOff, CloudCog, Loader2 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useData } from "@/contexts/data-context"
@@ -21,10 +21,23 @@ type StoragePreference = 'local' | 'cloud' | 'both';
 
 export default function ProfilePage() {
   const { profileAvatar, setProfileAvatar, storagePreference, setStoragePreference } = useData();
-  const { auth, isUserLoading } = useFirebase();
+  const { auth, user, isUserLoading } = useFirebase();
   const { toast } = useToast();
 
   const [firebaseConfig, setFirebaseConfig] = useState(initialFirebaseConfig);
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [isSheetIdSaving, setIsSheetIdSaving] = useState(false);
+  const [sheetId, setSheetId] = useState('');
+
+  useEffect(() => {
+    const fetchSheetId = async () => {
+      // In a real app you might fetch this from a user profile service
+      const savedSheetId = localStorage.getItem('googleSheetId') || '';
+      setSheetId(savedSheetId);
+    };
+    fetchSheetId();
+  }, []);
+  
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -60,22 +73,46 @@ export default function ProfilePage() {
     setFirebaseConfig(prev => ({...prev, [e.target.id]: e.target.value}));
   }
   
-  const handleSave = () => {
-    // In a real app, you would securely update the config and re-initialize Firebase
-    // For this prototype, we'll just save the preference to localStorage
+  const handleSavePreferences = () => {
     setStoragePreference(storagePreference);
     
-    // Here you would trigger a process to update `src/firebase/config.ts`
-    // and likely ask the user to restart or reload the app.
-    console.log("Saving new Firebase config:", firebaseConfig);
+    // In a real app, this would trigger a backend process to update `src/firebase/config.ts`
+    // For this prototype, we are simulating this by logging
+    console.log("Saving new Firebase config (simulation):", firebaseConfig);
 
     toast({
         title: "Ayarlar Kaydedildi",
-        description: `Veri depolama tercihiniz ve yapılandırmanız güncellendi.`,
+        description: `Veri depolama tercihiniz güncellendi.`,
     });
   }
 
-  const canConnectToFirebase = auth && !isUserLoading;
+  const handleGoogleAuth = async () => {
+    setIsAuthLoading(true);
+    try {
+        const res = await fetch('/api/auth/google');
+        const { url } = await res.json();
+        window.location.href = url;
+    } catch (error) {
+        console.error("Google Auth Error:", error);
+        toast({ title: "Google ile bağlanırken hata oluştu.", variant: 'destructive' });
+        setIsAuthLoading(false);
+    }
+  };
+
+  const handleSaveSheetId = async () => {
+    setIsSheetIdSaving(true);
+    // In a real app, you would securely save this to the user's profile in your database.
+    // For this prototype, we'll use localStorage.
+    localStorage.setItem('googleSheetId', sheetId);
+    toast({ title: "Google E-Tablo ID'si kaydedildi." });
+    
+    // You would also want to update your .env file on the server. This is a client-side simulation.
+    console.log(`Simulating update of .env with GOOGLE_SHEET_ID=${sheetId}`);
+    
+    setIsSheetIdSaving(false);
+  }
+
+  const canConnectToFirebase = auth && user && !isUserLoading;
 
   return (
     <div className="space-y-6">
@@ -92,8 +129,8 @@ export default function ProfilePage() {
               <div className="flex flex-col items-center gap-2 text-center">
                   <div {...getRootProps()} className="relative cursor-pointer group">
                       <Avatar className="h-36 w-36">
-                          <AvatarImage src={profileAvatar} alt="Profile Avatar"/>
-                          <AvatarFallback>RH</AvatarFallback>
+                          <AvatarImage src={user?.photoURL || profileAvatar} alt="Profile Avatar"/>
+                          <AvatarFallback>{user?.displayName?.substring(0, 2) || user?.email?.substring(0,2) || 'XX'}</AvatarFallback>
                       </Avatar>
                       <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                           <UploadCloud className="h-8 w-8 text-white"/>
@@ -106,11 +143,11 @@ export default function ProfilePage() {
               <div className="space-y-4">
                   <div className="space-y-2">
                       <Label htmlFor="name">Ad Soyad</Label>
-                      <Input id="name" defaultValue="Rıdvan Hoca" />
+                      <Input id="name" defaultValue={user?.displayName || ''} />
                   </div>
                   <div className="space-y-2">
                       <Label htmlFor="email">E-posta</Label>
-                      <Input id="email" type="email" defaultValue="ridvan.ozkan.183@gmail.com" />
+                      <Input id="email" type="email" defaultValue={user?.email || ''} disabled />
                   </div>
               </div>
           </CardContent>
@@ -150,8 +187,8 @@ export default function ProfilePage() {
                 {(storagePreference === 'cloud' || storagePreference === 'both') && (
                     <Card className="bg-secondary/50">
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-base"><CloudCog className="h-5 w-5 text-blue-600"/> Firebase Yapılandırması</CardTitle>
-                            <CardDescription>Bulut depolamayı aktif etmek için Firebase proje bilgilerinizi girin.</CardDescription>
+                            <CardTitle className="flex items-center gap-2 text-base"><CloudCog className="h-5 w-5 text-blue-600"/> Firebase & Sheets Yapılandırması</CardTitle>
+                            <CardDescription>Bulut depolamayı aktif etmek için Firebase proje bilgilerinizi girin ve Google Sheets'e erişim izni verin.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                              <Alert variant={canConnectToFirebase ? "default" : "destructive"} className={cn(
@@ -167,17 +204,31 @@ export default function ProfilePage() {
                                     {canConnectToFirebase ? "Uygulama başarıyla Firebase projenize bağlandı." : "Lütfen aşağıdaki yapılandırma bilgilerini kontrol edin veya yeni bir proje oluşturun."}
                                 </AlertDescription>
                             </Alert>
-                            <div className="space-y-2">
-                                <Label htmlFor="projectId">Proje ID</Label>
+                             <div className="space-y-2">
+                                <Label htmlFor="projectId">Firebase Proje ID</Label>
                                 <Input id="projectId" value={firebaseConfig.projectId} onChange={handleConfigChange} placeholder="my-awesome-project-12345" />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="apiKey">API Anahtarı</Label>
+                                <Label htmlFor="apiKey">Firebase API Anahtarı</Label>
                                 <Input id="apiKey" type="password" value={firebaseConfig.apiKey} onChange={handleConfigChange} />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="authDomain">Auth Domain</Label>
+                                <Label htmlFor="authDomain">Firebase Auth Domain</Label>
                                 <Input id="authDomain" value={firebaseConfig.authDomain} onChange={handleConfigChange} placeholder="my-project.firebaseapp.com" />
+                            </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="sheetId">Google Sheet ID</Label>
+                                <Input id="sheetId" value={sheetId} onChange={(e) => setSheetId(e.target.value)} placeholder="Google E-Tablo Kimliği" />
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                <Button onClick={handleGoogleAuth} disabled={isAuthLoading}>
+                                  {isAuthLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                                  Google Sheets İzni Ver
+                                </Button>
+                                <Button onClick={handleSaveSheetId} disabled={isSheetIdSaving}>
+                                  {isSheetIdSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                                  E-Tablo ID'sini Kaydet
+                                </Button>
                             </div>
                         </CardContent>
                     </Card>
@@ -186,9 +237,9 @@ export default function ProfilePage() {
         </Card>
 
         <div className="flex justify-end">
-            <Button onClick={handleSave}>
+            <Button onClick={handleSavePreferences}>
                 <Save className="mr-2 h-4 w-4"/>
-                Değişiklikleri Kaydet
+                Tercihleri Kaydet
             </Button>
         </div>
       </div>

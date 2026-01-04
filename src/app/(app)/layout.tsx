@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
 import {
@@ -50,11 +50,14 @@ import {
   BrainCircuit,
   Database,
   Settings,
-  PanelLeft
+  PanelLeft,
+  LogOut,
+  Loader2
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FirebaseClientProvider } from '@/firebase';
+import { FirebaseClientProvider, useUser } from '@/firebase';
 import { SheetPrimitive } from '@/components/ui/sheet';
+import { getAuth, signOut } from 'firebase/auth';
 
 const navItems = [
   { href: '/dashboard', label: 'Kontrol Merkezi', icon: LayoutGrid },
@@ -70,11 +73,23 @@ const navItems = [
 
 function AppHeader() {
   const { exams, selectedExam, setSelectedExam, loading, profileAvatar } = useData();
+  const { user } = useUser();
+  const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  const handleLogout = async () => {
+    try {
+      const auth = getAuth();
+      await signOut(auth);
+      router.push('/login');
+    } catch (error) {
+      console.error("Logout Error:", error);
+    }
+  };
 
   if (!isMounted) {
       return (
@@ -128,17 +143,17 @@ function AppHeader() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-10 w-10 rounded-full">
               <Avatar className="h-10 w-10">
-                 <AvatarImage src={profileAvatar} alt="User Avatar" />
-                <AvatarFallback>ÖT</AvatarFallback>
+                 <AvatarImage src={user?.photoURL || profileAvatar} alt="User Avatar" />
+                <AvatarFallback>{user?.displayName?.substring(0, 2) || user?.email?.substring(0,2) || 'XX'}</AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56" align="end" forceMount>
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">Rıdvan Hoca</p>
+                <p className="text-sm font-medium leading-none">{user?.displayName || 'Kullanıcı'}</p>
                 <p className="text-xs leading-none text-muted-foreground">
-                  ridvan.ozkan.183@gmail.com
+                  {user?.email}
                 </p>
               </div>
             </DropdownMenuLabel>
@@ -150,7 +165,10 @@ function AppHeader() {
               <Link href="/settings">Ayarlar</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Çıkış Yap</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Çıkış Yap</span>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -172,7 +190,7 @@ function AppSidebar() {
     <Sidebar
       variant="inset"
       collapsible="icon"
-      className="border-r-0"
+      className="hidden md:flex border-r-0"
     >
       <SidebarHeader>
         <Button variant="ghost" asChild className="h-auto justify-start gap-2 px-2 text-base">
@@ -217,18 +235,44 @@ function AppSidebar() {
   );
 }
 
+function ProtectedLayout({ children }: { children: React.ReactNode }) {
+  const { user, isUserLoading } = useUser();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.replace('/login');
+    }
+  }, [user, isUserLoading, router]);
+
+  if (isUserLoading || !user) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <DataProvider>
+      <SidebarProvider>
+        <AppSidebar />
+        <SidebarInset>
+            <AppHeader />
+            <main className="flex-1 p-4 md:p-6">{children}</main>
+        </SidebarInset>
+      </SidebarProvider>
+    </DataProvider>
+  );
+}
+
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <FirebaseClientProvider>
-        <DataProvider>
-          <SidebarProvider>
-            <AppSidebar />
-            <SidebarInset>
-                <AppHeader />
-                <main className="flex-1 p-4 md:p-6">{children}</main>
-            </SidebarInset>
-          </SidebarProvider>
-        </DataProvider>
+      <ProtectedLayout>
+        {children}
+      </ProtectedLayout>
     </FirebaseClientProvider>
   );
 }

@@ -4,9 +4,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { StudentExamResult } from '@/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useToast } from '@/hooks/use-toast';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirebase, useUser, useMemoFirebase } from '@/firebase';
 import { collection, doc, writeBatch, deleteDoc, query, where, getDocs } from 'firebase/firestore';
-import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 import { WithId } from '@/firebase/firestore/use-collection';
 import { mockStudentData } from '@/lib/mock-data';
 
@@ -36,9 +35,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [profileAvatar, setProfileAvatarState] = useState<string>('');
   const { toast } = useToast();
   
-  const { firestore, auth, user, isUserLoading } = useFirebase();
+  const { firestore } = useFirebase();
+  const { user, isUserLoading } = useUser();
 
   useEffect(() => {
+    // Only run on client
+    const savedPref = localStorage.getItem('storagePreference') as StoragePreference;
+    if (savedPref) {
+      setStoragePreferenceState(savedPref);
+    } else {
+      localStorage.setItem('storagePreference', 'local');
+    }
+
     const savedData = localStorage.getItem('studentData');
     if (savedData) {
       setLocalData(JSON.parse(savedData));
@@ -46,13 +54,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       const initialData = mockStudentData.map(d => ({...d, id: `${d.student_no}-${d.exam_name}`}));
       setLocalData(initialData);
       localStorage.setItem('studentData', JSON.stringify(initialData));
-    }
-
-    const savedPref = localStorage.getItem('storagePreference') as StoragePreference;
-    if (savedPref) {
-      setStoragePreferenceState(savedPref);
-    } else {
-      localStorage.setItem('storagePreference', 'local');
     }
 
     const storedAvatar = localStorage.getItem('profileAvatar');
@@ -67,20 +68,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const setStoragePreference = (pref: StoragePreference) => {
     setStoragePreferenceState(pref);
     localStorage.setItem('storagePreference', pref);
-    if ((pref === 'cloud' || pref === 'both') && !user && auth) {
-      initiateAnonymousSignIn(auth);
-    }
   };
-
-  useEffect(() => {
-    if (!isUserLoading && (storagePreference === 'cloud' || storagePreference === 'both') && !user && auth) {
-      initiateAnonymousSignIn(auth);
-    }
-  }, [isUserLoading, user, auth, storagePreference]);
   
   const resultsCollection = useMemoFirebase(() => {
     if ((storagePreference === 'cloud' || storagePreference === 'both') && firestore && user) {
-      return collection(firestore, 'results');
+      // Point to a user-specific subcollection
+      return collection(firestore, 'users', user.uid, 'results');
     }
     return null;
   }, [firestore, user, storagePreference]);
@@ -149,11 +142,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
        toast({ title: 'Veriler yerel olarak kaydedildi.' });
     }
 
-    if ((storagePreference === 'cloud' || storagePreference === 'both') && firestore) {
+    if ((storagePreference === 'cloud' || storagePreference === 'both') && firestore && user) {
         const batch = writeBatch(firestore);
         dataWithIds.forEach(item => {
+            // Use a consistent and valid ID format
             const docId = item.id.replace(/[\/.]/g, '-');
-            const newDocRef = doc(firestore, 'results', docId);
+            const newDocRef = doc(firestore, 'users', user.uid, 'results', docId);
+            // Use merge:true to create or update the document.
             batch.set(newDocRef, item, { merge: true });
         });
 
@@ -165,9 +160,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             toast({ title: "Firebase'e Kaydedilemedi", description: "Veriler buluta kaydedilirken bir hata oluştu.", variant: "destructive" });
         }
     } else if (storagePreference === 'cloud' || storagePreference === 'both') {
-        toast({ title: 'Bulut depolama aktif değil.', description: 'Firebase bağlantısı kurulamadı.', variant: 'destructive' });
+        toast({ title: 'Bulut depolama aktif değil.', description: 'Lütfen giriş yapın ve profil sayfasından Firebase ayarlarını kontrol edin.', variant: 'destructive' });
     }
-  }, [firestore, storagePreference, toast]);
+  }, [firestore, user, storagePreference, toast]);
   
   const deleteExam = useCallback(async (examNameToDelete: string) => {
     if (storagePreference === 'local' || storagePreference === 'both') {
@@ -178,8 +173,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       });
     }
 
-    if ((storagePreference === 'cloud' || storagePreference === 'both') && firestore) {
-        const q = query(collection(firestore, 'results'), where('exam_name', '==', examNameToDelete));
+    if ((storagePreference === 'cloud' || storagePreference === 'both') && firestore && user) {
+        const q = query(collection(firestore, 'users', user.uid, 'results'), where('exam_name', '==', examNameToDelete));
         try {
             const querySnapshot = await getDocs(q);
             if (!querySnapshot.empty) {
@@ -195,7 +190,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             toast({ title: "Silme Hatası", description: "Buluttan deneme silinirken bir hata oluştu.", variant: "destructive" });
         }
     }
-  }, [firestore, storagePreference, toast]);
+  }, [firestore, user, storagePreference, toast]);
 
   const value: DataContextType = {
     studentData: studentData || [],

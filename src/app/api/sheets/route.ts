@@ -23,6 +23,7 @@ async function getAuthClient(): Promise<OAuth2Client> {
         throw new Error("Google Refresh Token not found. Please authenticate through settings.");
     }
     
+    // Refresh the access token to ensure it's valid
     await oauth2Client.getAccessToken();
 
     return oauth2Client;
@@ -92,7 +93,7 @@ export async function GET(req: NextRequest) {
 
         return NextResponse.json(data);
     } catch (error: any) {
-        console.error('Google Sheets API GET Error:', error.message);
+        console.error('Google Sheets API GET Error:', error);
         return NextResponse.json({ error: 'Google Sheets verileri okunurken bir hata oluştu.', details: error.message }, { status: 500 });
     }
 }
@@ -127,22 +128,18 @@ export async function POST(req: NextRequest) {
             ...data.map(item => headerRow.map(key => item[key] !== undefined ? item[key] : ""))
         ];
         
-        if (values.length > 0) {
-            const result = await sheets.spreadsheets.values.update({
-                spreadsheetId: SHEET_ID,
-                range: `${SHEET_NAME}!A1`,
-                valueInputOption: 'USER_ENTERED',
-                requestBody: {
-                    values: values,
-                },
-            });
-            return NextResponse.json({ success: true, updatedRange: result.data.updatedRange });
-        }
-        
-        return NextResponse.json({ success: true, message: "Sheet cleared, no data to write." });
+        const result = await sheets.spreadsheets.values.update({
+            spreadsheetId: SHEET_ID,
+            range: `${SHEET_NAME}!A1`,
+            valueInputOption: 'USER_ENTERED',
+            requestBody: {
+                values: values,
+            },
+        });
+        return NextResponse.json({ success: true, updatedRange: result.data.updatedRange });
 
     } catch (error: any) {
-        console.error('Google Sheets API POST Error:', error.message);
+        console.error('Google Sheets API POST Error:', error);
         return NextResponse.json({ error: 'Google Sheets\'e yazılırken bir hata oluştu.', details: error.message }, { status: 500 });
     }
 }

@@ -21,9 +21,11 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
-async function fetchSheetData() {
+async function fetchSheetData(): Promise<StudentExamResult[]> {
   const res = await fetch('/api/sheets');
   if (!res.ok) {
+    const errorBody = await res.text();
+    console.error("Failed to fetch sheet data, Body:", errorBody);
     throw new Error(`Failed to fetch sheet data: ${res.statusText}`);
   }
   return res.json();
@@ -59,10 +61,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           setSelectedExam(exams[0] || '');
         }
       } catch (error) {
-        console.error("Error loading data from Google Sheets:", error);
+        console.error("Error loading data from Google Sheets, falling back to local data.", error);
         toast({
-          title: "Veri Yükleme Hatası",
-          description: "Google Sheets verileri yüklenemedi. Çevrimdışı modda devam ediliyor.",
+          title: "Canlı Veri Yüklenemedi",
+          description: "Google Sheets verileri yüklenemedi. Çevrimdışı modda devam ediliyor. Ayarlarınızı kontrol edin.",
           variant: "destructive",
         });
         // Fallback to local data if sheets fail

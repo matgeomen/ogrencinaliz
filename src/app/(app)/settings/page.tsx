@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
+import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,16 +18,41 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function SettingsPage() {
     const { theme, setTheme, resolvedTheme } = useTheme();
+    const searchParams = useSearchParams();
+    const { toast } = useToast();
+
     const [showApiKey, setShowApiKey] = useState(false);
     const [showClientSecret, setShowClientSecret] = useState(false);
     const [mounted, setMounted] = useState(false);
-    const { toast } = useToast();
+    
+    const [clientId, setClientId] = useState('');
+    const [clientSecret, setClientSecret] = useState('');
 
     useEffect(() => {
         setMounted(true);
-    }, []);
+        
+        const success = searchParams.get('success');
+        const error = searchParams.get('error');
+
+        if (success) {
+            toast({
+                title: "Bağlantı Başarılı!",
+                description: "Google Sheets hesabınız başarıyla bağlandı. Canlı verileri görmek için sayfayı yenileyin.",
+            });
+        }
+        if (error) {
+            toast({
+                title: "Bağlantı Kurulamadı",
+                description: "Google kimlik doğrulaması sırasında bir hata oluştu. Lütfen bilgilerinizi kontrol edip tekrar deneyin.",
+                variant: "destructive",
+            });
+        }
+    }, [searchParams, toast]);
 
     const handleSaveGoogleInfo = () => {
+        // Here you would typically save these to a secure backend
+        // or trigger a function to update environment variables.
+        // For this example, we just show a toast.
         toast({
             title: "Bilgiler Kaydedildi",
             description: "Google Client bilgileriniz başarıyla kaydedildi.",
@@ -145,13 +171,13 @@ export default function SettingsPage() {
                                     <Label htmlFor="client-id">Google Client ID</Label>
                                 </div>
                                 <div className="relative">
-                                    <Input id="client-id" placeholder="Client ID..." />
+                                    <Input id="client-id" placeholder="Client ID..." value={clientId} onChange={(e) => setClientId(e.target.value)} />
                                 </div>
                             </div>
                              <div className="space-y-2">
                                 <Label htmlFor="client-secret">Google Client Secret</Label>
                                 <div className="relative">
-                                    <Input id="client-secret" type={showClientSecret ? "text" : "password"} placeholder="Client Secret..." />
+                                    <Input id="client-secret" type={showClientSecret ? "text" : "password"} placeholder="Client Secret..." value={clientSecret} onChange={(e) => setClientSecret(e.target.value)} />
                                      <Button variant="ghost" size="icon" onClick={() => setShowClientSecret(!showClientSecret)} className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7">
                                         {showClientSecret ? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}
                                     </Button>
@@ -184,7 +210,7 @@ export default function SettingsPage() {
                                 <li><span className="font-semibold">"Credentials"</span> sekmesinde, <span className="font-semibold">"+ CREATE CREDENTIALS"</span> ile <span className="font-semibold">"OAuth client ID"</span> oluşturun.</li>
                                 <li>
                                     <span className="font-semibold">"Authorized redirect URIs"</span> bölümüne şunu ekleyin:
-                                    <code className="block my-1 p-2 bg-yellow-100 dark:bg-yellow-800/50 rounded text-xs break-all">https://student-progress-28.preview.emergentagent.com/api/oauth/sheets/callback</code>
+                                    <code className="block my-1 p-2 bg-yellow-100 dark:bg-yellow-800/50 rounded text-xs break-all">{process.env.NEXT_PUBLIC_BASE_URL}/api/oauth/sheets/callback</code>
                                 </li>
                                 <li>Oluşturulan Client ID ve Secret'ı yukarıdaki alanlara girin ve kaydedin.</li>
                             </ol>
@@ -222,5 +248,3 @@ export default function SettingsPage() {
 
     
 }
-
-    

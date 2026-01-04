@@ -33,18 +33,6 @@ async function appendToEnvFile(updates: { key: string, value: string }[]) {
         }
     });
 
-    const keysToUpdate = updates.map(u => u.key);
-    const existingKeys = lines.map(line => line.split('=')[0]);
-    keysToUpdate.forEach(key => {
-        if (!existingKeys.includes(key)) {
-            const update = updates.find(u => u.key === key);
-            if (update) {
-                const formattedValue = update.value.includes(' ') ? `"${update.value}"` : update.value;
-                lines.push(`${key}=${formattedValue}`);
-            }
-        }
-    });
-    
     await fs.writeFile(envPath, lines.filter(Boolean).join('\n'));
 }
 

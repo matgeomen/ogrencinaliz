@@ -39,19 +39,22 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const { firestore, auth, user, isUserLoading } = useFirebase();
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedData = localStorage.getItem('studentData');
-      setLocalData(savedData ? JSON.parse(savedData) : mockStudentData.map(d => ({...d, id: `${d.student_no}-${d.exam_name}`})));
+    const savedData = localStorage.getItem('studentData');
+    if (savedData) {
+      setLocalData(JSON.parse(savedData));
     } else {
-        setLocalData(mockStudentData.map(d => ({...d, id: `${d.student_no}-${d.exam_name}`})))
+      const initialData = mockStudentData.map(d => ({...d, id: `${d.student_no}-${d.exam_name}`}));
+      setLocalData(initialData);
+      localStorage.setItem('studentData', JSON.stringify(initialData));
     }
-  }, []);
 
-  useEffect(() => {
     const savedPref = localStorage.getItem('storagePreference') as StoragePreference;
     if (savedPref) {
       setStoragePreferenceState(savedPref);
+    } else {
+      localStorage.setItem('storagePreference', 'local');
     }
+
     const storedAvatar = localStorage.getItem('profileAvatar');
     if (storedAvatar) {
       setProfileAvatarState(storedAvatar);
@@ -146,10 +149,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
        toast({ title: 'Veriler yerel olarak kaydedildi.' });
     }
 
-    if ((storagePreference === 'cloud' || storagePreference === 'both') && firestore && resultsCollection) {
+    if ((storagePreference === 'cloud' || storagePreference === 'both') && firestore) {
         const batch = writeBatch(firestore);
-        newData.forEach(item => {
-            const docId = `${item.student_no}-${item.exam_name}-${item.date}`;
+        dataWithIds.forEach(item => {
+            const docId = item.id.replace(/[\/.]/g, '-');
             const newDocRef = doc(firestore, 'results', docId);
             batch.set(newDocRef, item, { merge: true });
         });
@@ -164,7 +167,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     } else if (storagePreference === 'cloud' || storagePreference === 'both') {
         toast({ title: 'Bulut depolama aktif değil.', description: 'Firebase bağlantısı kurulamadı.', variant: 'destructive' });
     }
-  }, [firestore, resultsCollection, storagePreference, toast]);
+  }, [firestore, storagePreference, toast]);
   
   const deleteExam = useCallback(async (examNameToDelete: string) => {
     if (storagePreference === 'local' || storagePreference === 'both') {
@@ -175,21 +178,24 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       });
     }
 
-    if ((storagePreference === 'cloud' || storagePreference === 'both') && firestore && cloudData) {
+    if ((storagePreference === 'cloud' || storagePreference === 'both') && firestore) {
         const q = query(collection(firestore, 'results'), where('exam_name', '==', examNameToDelete));
-        const querySnapshot = await getDocs(q);
-        
-        if (!querySnapshot.empty) {
-            const batch = writeBatch(firestore);
-            querySnapshot.forEach(doc => {
-                batch.delete(doc.ref);
-            });
-            await batch.commit();
-            toast({ title: `"${examNameToDelete}" denemesi buluttan silindi.` });
+        try {
+            const querySnapshot = await getDocs(q);
+            if (!querySnapshot.empty) {
+                const batch = writeBatch(firestore);
+                querySnapshot.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+                await batch.commit();
+                toast({ title: `"${examNameToDelete}" denemesi buluttan silindi.` });
+            }
+        } catch(error) {
+            console.error("Error deleting exam from Firestore:", error);
+            toast({ title: "Silme Hatası", description: "Buluttan deneme silinirken bir hata oluştu.", variant: "destructive" });
         }
     }
-    toast({ title: "Deneme Silindi", description: `"${examNameToDelete}" denemesi ve ilişkili tüm veriler silindi.` });
-  }, [firestore, cloudData, storagePreference, toast]);
+  }, [firestore, storagePreference, toast]);
 
   const value: DataContextType = {
     studentData: studentData || [],

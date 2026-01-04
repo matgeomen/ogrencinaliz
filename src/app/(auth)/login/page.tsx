@@ -104,7 +104,7 @@ export default function LoginPage() {
       
       toast({ title: 'Kayıt başarılı!', description: 'Giriş yapabilirsiniz.' });
       router.push('/dashboard');
-    } catch (error: any)
+    } catch (error: any) {
       toast({
         title: 'Kayıt hatası',
         description: error.message || 'Bir hata oluştu.',

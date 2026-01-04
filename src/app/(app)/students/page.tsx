@@ -164,7 +164,7 @@ export default function StudentsPage() {
                   filteredData.map((student) => {
                     const status = getStatus(student.toplam_puan);
                     return (
-                    <Dialog key={`${student.student_no}-${student.exam_name}`}>
+                    <Dialog key={student.id}>
                       <DialogTrigger asChild>
                         <TableRow className="cursor-pointer">
                           <TableCell>{student.student_no}</TableCell>

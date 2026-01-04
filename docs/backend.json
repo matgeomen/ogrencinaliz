@@ -6,81 +6,57 @@
       "type": "object",
       "description": "Represents the result of a student for a specific exam.",
       "properties": {
-        "exam_name": {
-          "type": "string",
-          "description": "Name of the exam."
-        },
-        "date": {
-          "type": "string",
-          "description": "Date of the exam."
-        },
-        "class": {
-          "type": "string",
-          "description": "Class of the student (e.g., 8-A)."
-        },
-        "student_no": {
-          "type": "number",
-          "description": "Student number."
-        },
-        "student_name": {
-          "type": "string",
-          "description": "Student name."
-        },
+        "exam_name": { "type": "string", "description": "Name of the exam." },
+        "date": { "type": "string", "description": "Date of the exam." },
+        "class": { "type": "string", "description": "Class of the student (e.g., 8-A)." },
+        "student_no": { "type": "number", "description": "Student number." },
+        "student_name": { "type": "string", "description": "Student name." },
         "toplam_dogru": { "type": "number" },
         "toplam_yanlis": { "type": "number" },
         "toplam_net": { "type": "number" },
         "toplam_puan": { "type": "number" },
-        "turkce_d": { "type": "number" },
-        "turkce_y": { "type": "number" },
-        "turkce_net": { "type": "number" },
-        "tarih_d": { "type": "number" },
-        "tarih_y": { "type": "number" },
-        "tarih_net": { "type": "number" },
-        "din_d": { "type": "number" },
-        "din_y": { "type": "number" },
-        "din_net": { "type": "number" },
-        "ing_d": { "type": "number" },
-        "ing_y": { "type": "number" },
-        "ing_net": { "type": "number" },
-        "mat_d": { "type": "number" },
-        "mat_y": { "type": "number" },
-        "mat_net": { "type": "number" },
-        "fen_d": { "type": "number" },
-        "fen_y": { "type": "number" },
-        "fen_net": { "type": "number" }
+        "turkce_d": { "type": "number" }, "turkce_y": { "type": "number" }, "turkce_net": { "type": "number" },
+        "tarih_d": { "type": "number" }, "tarih_y": { "type": "number" }, "tarih_net": { "type": "number" },
+        "din_d": { "type": "number" }, "din_y": { "type": "number" }, "din_net": { "type": "number" },
+        "ing_d": { "type": "number" }, "ing_y": { "type": "number" }, "ing_net": { "type": "number" },
+        "mat_d": { "type": "number" }, "mat_y": { "type": "number" }, "mat_net": { "type": "number" },
+        "fen_d": { "type": "number" }, "fen_y": { "type": "number" }, "fen_net": { "type": "number" }
       },
-      "required": [
-        "exam_name",
-        "date",
-        "class",
-        "student_no",
-        "student_name",
-        "toplam_net",
-        "toplam_puan"
-      ]
+      "required": ["exam_name", "date", "class", "student_no", "student_name", "toplam_net", "toplam_puan"]
+    },
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user's profile information.",
+      "properties": {
+        "uid": { "type": "string", "description": "The user's unique ID." },
+        "email": { "type": "string", "format": "email", "description": "The user's email address." },
+        "role": { "type": "string", "enum": ["admin", "user"], "description": "The user's role." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "The timestamp of when the user was created." }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
     }
   },
   "auth": {
-    "providers": [
-      "anonymous"
-    ]
+    "providers": ["email"]
   },
   "firestore": {
     "structure": [
       {
-        "path": "/results/{resultId}",
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": { "$ref": "#/entities/UserProfile" },
+          "description": "Stores user profile information."
+        }
+      },
+      {
+        "path": "/users/{userId}/results/{resultId}",
         "definition": {
           "entityName": "StudentExamResult",
-          "schema": {
-            "$ref": "#/entities/StudentExamResult"
-          },
-          "description": "Stores individual student exam results.",
-          "params": [
-            {
-              "name": "resultId",
-              "description": "Unique identifier for the exam result."
-            }
-          ]
+          "schema": { "$ref": "#/entities/StudentExamResult" },
+          "description": "Stores individual student exam results for a specific user."
         }
       }
     ]

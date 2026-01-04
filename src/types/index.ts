@@ -34,3 +34,10 @@ export interface ExamStats {
   studentCount: number;
   avgScore: number;
 }
+
+export interface UserProfile {
+    uid: string;
+    email: string;
+    role: 'admin' | 'user';
+    createdAt: any; // Firestore ServerTimestamp
+}

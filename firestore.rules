@@ -1,11 +1,31 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Kullanıcıların kendi veri koleksiyonlarına erişimini sağlar
-    match /users/{userId}/{documents=**} {
-      // Bir kullanıcının yalnızca kendi belgelerini okumasına ve yazmasına izin verilir.
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    // Helper function to check if the user is an admin
+    function isAdmin() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Rules for the 'users' collection
+    match /users/{userId} {
+      // Admins can read/write any user profile
+      // Users can only read/write their own profile
+      allow read, write: if isAdmin() || request.auth.uid == userId;
+    }
+
+    // Admins can read all user documents
+    match /users/{userId} {
+      allow list: if isAdmin();
+    }
+    
+    // Rules for the 'results' subcollection
+    match /users/{userId}/results/{resultId} {
+      // Admins can read/write any result
+      // Users can only read/write their own results
+      allow read, write: if isAdmin() || request.auth.uid == userId;
     }
   }
 }

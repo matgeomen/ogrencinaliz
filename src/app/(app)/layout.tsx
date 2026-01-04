@@ -52,12 +52,16 @@ import {
   Settings,
   PanelLeft,
   LogOut,
-  Loader2
+  Loader2,
+  Shield,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FirebaseClientProvider, useUser } from '@/firebase';
-import { SheetPrimitive } from '@/components/ui/sheet';
+import { FirebaseClientProvider, useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { getAuth, signOut } from 'firebase/auth';
+import { UserProfile } from '@/types';
+import { doc } from 'firebase/firestore';
+import { useFirebase } from '@/firebase/provider';
+
 
 const navItems = [
   { href: '/dashboard', label: 'Kontrol Merkezi', icon: LayoutGrid },
@@ -179,6 +183,19 @@ function AppHeader() {
 function AppSidebar() {
   const pathname = usePathname();
   const { isMobile, setOpenMobile } = useSidebar();
+  const { user } = useUser();
+  const { firestore } = useFirebase();
+  
+  const userProfileRef = useMemoFirebase(() => {
+    if (firestore && user) {
+        return doc(firestore, 'users', user.uid);
+    }
+    return null;
+  }, [firestore, user]);
+
+  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+
+  const isAdmin = userProfile?.role === 'admin';
 
   const handleLinkClick = () => {
     if (isMobile) {
@@ -190,7 +207,7 @@ function AppSidebar() {
     <Sidebar
       variant="inset"
       collapsible="icon"
-      className="hidden md:flex border-r-0"
+      className="border-r-0"
     >
       <SidebarHeader>
         <Button variant="ghost" asChild className="h-auto justify-start gap-2 px-2 text-base">
@@ -217,6 +234,21 @@ function AppSidebar() {
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
+          {isAdmin && (
+             <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname.startsWith('/admin')}
+                  tooltip="Admin Paneli"
+                  onClick={handleLinkClick}
+                >
+                  <Link href="/admin">
+                    <Shield />
+                    <span>Admin</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+          )}
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter>

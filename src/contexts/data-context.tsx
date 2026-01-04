@@ -1,11 +1,10 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { StudentExamResult } from '@/types';
-import { mockStudentData } from '@/lib/mock-data';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useToast } from '@/hooks/use-toast';
-import { useCollection, useFirebase, useUser } from '@/firebase';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 import { WithId } from '@/firebase/firestore/use-collection';
@@ -39,7 +38,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isUserLoading, user, auth]);
   
-  const resultsCollection = useMemo(() => {
+  const resultsCollection = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'results');
   }, [firestore]);
@@ -61,12 +60,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
   
-  const exams = useMemo(() => {
+  const exams = useMemoFirebase(() => {
       if (!studentData) return [];
       return Array.from(new Set(studentData.map(d => d.exam_name))).sort();
   }, [studentData]);
   
-  const classes = useMemo(() => {
+  const classes = useMemoFirebase(() => {
       if (!studentData) return [];
       return Array.from(new Set(studentData.map(d => d.class))).sort();
   }, [studentData]);
@@ -136,10 +135,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     studentData: studentData || [],
     addStudentData,
     deleteExam,
-    exams,
+    exams: exams || [],
     selectedExam,
     setSelectedExam,
-    classes,
+    classes: classes || [],
     loading,
     profileAvatar,
     setProfileAvatar,

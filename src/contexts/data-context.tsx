@@ -1,11 +1,11 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { StudentExamResult } from '@/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useToast } from '@/hooks/use-toast';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
-import { collection, doc, writeBatch } from 'firebase/firestore';
+import { collection, doc, writeBatch, deleteDoc, query, where, getDocs } from 'firebase/firestore';
 import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 import { WithId } from '@/firebase/firestore/use-collection';
 import { mockStudentData } from '@/lib/mock-data';
@@ -30,20 +30,22 @@ interface DataContextType {
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
-  const [localData, setLocalData] = useState<WithId<StudentExamResult>[]>(() => {
-    if (typeof window !== 'undefined') {
-      const savedData = localStorage.getItem('studentData');
-      return savedData ? JSON.parse(savedData) : mockStudentData.map(d => ({...d, id: `${d.student_no}-${d.exam_name}`}));
-    }
-    return mockStudentData.map(d => ({...d, id: `${d.student_no}-${d.exam_name}`}));
-  });
-  
+  const [localData, setLocalData] = useState<WithId<StudentExamResult>[]>([]);
   const [storagePreference, setStoragePreferenceState] = useState<StoragePreference>('local');
   const [selectedExam, setSelectedExam] = useState<string>('');
   const [profileAvatar, setProfileAvatarState] = useState<string>('');
   const { toast } = useToast();
   
   const { firestore, auth, user, isUserLoading } = useFirebase();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedData = localStorage.getItem('studentData');
+      setLocalData(savedData ? JSON.parse(savedData) : mockStudentData.map(d => ({...d, id: `${d.student_no}-${d.exam_name}`})));
+    } else {
+        setLocalData(mockStudentData.map(d => ({...d, id: `${d.student_no}-${d.exam_name}`})))
+    }
+  }, []);
 
   useEffect(() => {
     const savedPref = localStorage.getItem('storagePreference') as StoragePreference;
@@ -90,15 +92,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       return localData;
     }
     if (storagePreference === 'both') {
-      // Merge local and cloud data, giving precedence to cloud data
       const allData = [...localData];
       if (cloudData) {
         cloudData.forEach(cd => {
           const index = allData.findIndex(ld => ld.id === cd.id);
           if (index !== -1) {
-            allData[index] = cd; // Update with cloud data
+            allData[index] = cd;
           } else {
-            allData.push(cd); // Add new cloud data
+            allData.push(cd);
           }
         });
       }
@@ -148,7 +149,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if ((storagePreference === 'cloud' || storagePreference === 'both') && firestore && resultsCollection) {
         const batch = writeBatch(firestore);
         newData.forEach(item => {
-            // Use a consistent ID for cloud and local
             const docId = `${item.student_no}-${item.exam_name}-${item.date}`;
             const newDocRef = doc(firestore, 'results', docId);
             batch.set(newDocRef, item, { merge: true });
@@ -176,22 +176,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
 
     if ((storagePreference === 'cloud' || storagePreference === 'both') && firestore && cloudData) {
-        const batch = writeBatch(firestore);
-        const docsToDelete = cloudData.filter(d => d.exam_name === examNameToDelete);
-
-        if(docsToDelete.length > 0) {
-            docsToDelete.forEach(docToDelete => {
-                const docRef = doc(firestore, 'results', docToDelete.id);
-                batch.delete(docRef);
+        const q = query(collection(firestore, 'results'), where('exam_name', '==', examNameToDelete));
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+            const batch = writeBatch(firestore);
+            querySnapshot.forEach(doc => {
+                batch.delete(doc.ref);
             });
-            
-            try {
-                await batch.commit();
-                toast({ title: `"${examNameToDelete}" denemesi buluttan silindi.` });
-            } catch (error) {
-                console.error("Failed to delete data from Firestore:", error);
-                toast({ title: "Firebase'den Silinemedi", variant: "destructive" });
-            }
+            await batch.commit();
+            toast({ title: `"${examNameToDelete}" denemesi buluttan silindi.` });
         }
     }
     toast({ title: "Deneme Silindi", description: `"${examNameToDelete}" denemesi ve ilişkili tüm veriler silindi.` });

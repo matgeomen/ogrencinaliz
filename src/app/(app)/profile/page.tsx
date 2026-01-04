@@ -1,22 +1,29 @@
 "use client"
 
-import { useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { useDropzone } from "react-dropzone"
 import { PageHeader } from "@/components/page-header"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Database, Save, User, UploadCloud, Info } from "lucide-react"
+import { Database, Save, User, UploadCloud, Info, Wifi, WifiOff, CloudCog } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useData } from "@/contexts/data-context"
 import { useToast } from "@/hooks/use-toast"
-import { firebaseConfig } from "@/firebase/config"
+import { firebaseConfig as initialFirebaseConfig } from "@/firebase/config"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { useFirebase } from "@/firebase"
+
+type StoragePreference = 'local' | 'cloud' | 'both';
 
 export default function ProfilePage() {
-  const { profileAvatar, setProfileAvatar } = useData();
+  const { profileAvatar, setProfileAvatar, storagePreference, setStoragePreference } = useData();
+  const { auth, isUserLoading } = useFirebase();
   const { toast } = useToast();
+
+  const [firebaseConfig, setFirebaseConfig] = useState(initialFirebaseConfig);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -47,15 +54,27 @@ export default function ProfilePage() {
     accept: { 'image/*': ['.jpeg', '.png', '.jpg', '.gif', '.webp'] },
     multiple: false,
   });
+
+  const handleConfigChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFirebaseConfig(prev => ({...prev, [e.target.id]: e.target.value}));
+  }
   
   const handleSave = () => {
-    // Burada kullanıcı bilgilerini kaydetme mantığı olabilir.
-    // Şimdilik sadece bir bildirim gösteriyoruz.
+    // In a real app, you would securely update the config and re-initialize Firebase
+    // For this prototype, we'll just save the preference to localStorage
+    setStoragePreference(storagePreference);
+    
+    // Here you would trigger a process to update `src/firebase/config.ts`
+    // and likely ask the user to restart or reload the app.
+    console.log("Saving new Firebase config:", firebaseConfig);
+
     toast({
-        title: "Profil Kaydedildi",
-        description: "Kişisel bilgileriniz başarıyla güncellendi.",
+        title: "Ayarlar Kaydedildi",
+        description: `Veri depolama tercihiniz ve yapılandırmanız güncellendi.`,
     });
   }
+
+  const canConnectToFirebase = auth && !isUserLoading;
 
   return (
     <div className="space-y-6">
@@ -96,27 +115,73 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
         
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Database className="h-5 w-5"/> Veri Depolama (Firebase)</CardTitle>
-            <CardDescription>Uygulama verileri bulutta Firebase Firestore üzerinde saklanmaktadır.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-              <Alert variant="default" className="bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800">
-                <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                <AlertTitle className="font-semibold text-blue-800 dark:text-blue-300">Firebase Entegrasyonu Aktif</AlertTitle>
-                <AlertDescription className="text-blue-700 dark:text-blue-300/80 text-sm mt-1">
-                  Tüm öğrenci ve sınav verileriniz, Google'ın sunduğu güvenli ve hızlı bir bulut veritabanı olan Firebase Firestore üzerinde depolanmaktadır. Verileriniz anlık olarak kaydedilir ve tüm cihazlarınızda senkronize olur.
-                </AlertDescription>
-              </Alert>
-              <div className="space-y-2 text-sm">
-                <Label htmlFor="project-id">Bağlı Firebase Projesi</Label>
-                <Input id="project-id" readOnly value={firebaseConfig.projectId} className="font-mono"/>
-                 <p className="text-xs text-muted-foreground">
-                    Bu proje sizin için otomatik olarak oluşturuldu. Yapılandırma detayları <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded-sm">src/firebase/config.ts</code> dosyasındadır.
-                </p>
-              </div>
-          </CardContent>
+         <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Database className="h-5 w-5"/> Veri Depolama Tercihi</CardTitle>
+                <CardDescription>Uygulama verilerinin nerede saklanacağını seçin.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <RadioGroup value={storagePreference} onValueChange={(value) => setStoragePreference(value as StoragePreference)} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                     <Label className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary cursor-pointer">
+                        <RadioGroupItem value="local" className="sr-only" />
+                        <WifiOff className="h-8 w-8 mb-2" />
+                        <span className="font-semibold">Sadece Yerel</span>
+                        <span className="text-xs text-muted-foreground text-center mt-1">Veriler sadece bu cihazda saklanır.</span>
+                    </Label>
+                    <Label className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary cursor-pointer">
+                        <RadioGroupItem value="cloud" className="sr-only" />
+                        <Wifi className="h-8 w-8 mb-2 text-blue-500" />
+                        <span className="font-semibold">Sadece Bulut</span>
+                        <span className="text-xs text-muted-foreground text-center mt-1">Veriler Firebase'de saklanır, internet gerekir.</span>
+                    </Label>
+                    <Label className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary cursor-pointer">
+                        <RadioGroupItem value="both" className="sr-only" />
+                         <div className="flex items-center justify-center mb-2">
+                            <WifiOff className="h-6 w-6" />
+                            <span className="mx-1">+</span>
+                            <Wifi className="h-6 w-6 text-blue-500" />
+                        </div>
+                        <span className="font-semibold">Her İkisi de</span>
+                        <span className="text-xs text-muted-foreground text-center mt-1">Bulutta saklanır ve yerel yedeği tutulur.</span>
+                    </Label>
+                </RadioGroup>
+
+                {(storagePreference === 'cloud' || storagePreference === 'both') && (
+                    <Card className="bg-secondary/50">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-base"><CloudCog className="h-5 w-5 text-blue-600"/> Firebase Yapılandırması</CardTitle>
+                            <CardDescription>Bulut depolamayı aktif etmek için Firebase proje bilgilerinizi girin.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                             <Alert variant={canConnectToFirebase ? "default" : "destructive"} className={cn(
+                                canConnectToFirebase 
+                                ? "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800"
+                                : "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800"
+                            )}>
+                                <Info className={cn("h-4 w-4", canConnectToFirebase ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")} />
+                                <AlertTitle className={cn("font-semibold", canConnectToFirebase ? "text-green-800 dark:text-green-300" : "text-red-800 dark:text-red-300")}>
+                                    {canConnectToFirebase ? "Firebase Bağlantısı Aktif" : "Firebase Bağlantısı Kurulamadı"}
+                                </AlertTitle>
+                                <AlertDescription className={cn("text-sm", canConnectToFirebase ? "text-green-700 dark:text-green-300/80" : "text-red-700 dark:text-red-300/80")}>
+                                    {canConnectToFirebase ? "Uygulama başarıyla Firebase projenize bağlandı." : "Lütfen aşağıdaki yapılandırma bilgilerini kontrol edin veya yeni bir proje oluşturun."}
+                                </AlertDescription>
+                            </Alert>
+                            <div className="space-y-2">
+                                <Label htmlFor="projectId">Proje ID</Label>
+                                <Input id="projectId" value={firebaseConfig.projectId} onChange={handleConfigChange} placeholder="my-awesome-project-12345" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="apiKey">API Anahtarı</Label>
+                                <Input id="apiKey" type="password" value={firebaseConfig.apiKey} onChange={handleConfigChange} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="authDomain">Auth Domain</Label>
+                                <Input id="authDomain" value={firebaseConfig.authDomain} onChange={handleConfigChange} placeholder="my-project.firebaseapp.com" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+            </CardContent>
         </Card>
 
         <div className="flex justify-end">

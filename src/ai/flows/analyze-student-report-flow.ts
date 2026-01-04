@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Öğrenci deneme sınavı sonuçlarını analiz eden bir AI akışı.
@@ -8,8 +9,19 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { StudentExamResult } from '@/types';
 import { z } from 'genkit';
+
+const KonuAnaliziSchema = z.object({
+    konu: z.string(),
+    sonuc: z.enum(['D', 'Y', 'B']),
+});
+
+const DersAnaliziSchema = z.object({
+    dogru: z.number(),
+    yanlis: z.number(),
+    net: z.number(),
+    kazanimlar: z.array(KonuAnaliziSchema),
+});
 
 const StudentExamResultSchema = z.object({
     exam_name: z.string(),
@@ -21,12 +33,12 @@ const StudentExamResultSchema = z.object({
     toplam_yanlis: z.number(),
     toplam_net: z.number(),
     toplam_puan: z.number(),
-    turkce_d: z.number(), turkce_y: z.number(), turkce_net: z.number(),
-    tarih_d: z.number(), tarih_y: z.number(), tarih_net: z.number(),
-    din_d: z.number(), din_y: z.number(), din_net: z.number(),
-    ing_d: z.number(), ing_y: z.number(), ing_net: z.number(),
-    mat_d: z.number(), mat_y: z.number(), mat_net: z.number(),
-    fen_d: z.number(), fen_y: z.number(), fen_net: z.number(),
+    turkce: DersAnaliziSchema,
+    mat: DersAnaliziSchema,
+    fen: DersAnaliziSchema,
+    tarih: DersAnaliziSchema,
+    din: DersAnaliziSchema,
+    ing: DersAnaliziSchema,
 });
 
 
@@ -40,12 +52,12 @@ export type AnalyzeStudentReportInput = z.infer<typeof AnalyzeStudentReportInput
 
 const AnalyzeStudentReportOutputSchema = z.object({
   summary: z.string().describe('Öğrencinin genel performansını özetleyen bir giriş paragrafı.'),
-  strengths: z.array(z.string()).describe('Öğrencinin güçlü olduğu yönleri ve dersleri listeleyen maddeler.'),
-  areasForImprovement: z.array(z.string()).describe('Öğrencinin gelişmesi gereken alanları ve dersleri listeleyen maddeler.'),
+  strengths: z.array(z.string()).describe('Öğrencinin güçlü olduğu yönleri ve dersleri/konuları listeleyen maddeler.'),
+  areasForImprovement: z.array(z.string()).describe('Öğrencinin gelişmesi gereken alanları ve özellikle zorlandığı konuları listeleyen maddeler.'),
   roadmap: z.array(z.object({
     title: z.string().describe('Yol haritası adımının başlığı.'),
     description: z.string().describe('Yol haritası adımının detaylı açıklaması.'),
-  })).describe('Öğrencinin başarısını artırmak için atılması gereken adımları içeren yol haritası.')
+  })).describe('Öğrencinin başarısını artırmak için atması gereken somut adımları içeren yol haritası.')
 });
 export type AnalyzeStudentReportOutput = z.infer<
   typeof AnalyzeStudentReportOutputSchema
@@ -54,10 +66,27 @@ export type AnalyzeStudentReportOutput = z.infer<
 export async function analyzeStudentReport(
   input: AnalyzeStudentReportInput
 ): Promise<AnalyzeStudentReportOutput> {
-  // Veriyi prompt için daha okunabilir bir formata dönüştür
-  const formattedResults = input.examResults.map(r => 
-    `Deneme: ${r.exam_name}, Puan: ${r.toplam_puan.toFixed(2)}, Net: ${r.toplam_net.toFixed(2)} (Türkçe: ${r.turkce_net.toFixed(2)}, Mat: ${r.mat_net.toFixed(2)}, Fen: ${r.fen_net.toFixed(2)}, Tarih: ${r.tarih_net.toFixed(2)}, Din: ${r.din_net.toFixed(2)}, İng: ${r.ing_net.toFixed(2)})`
-  ).join('\n');
+  
+  const formattedResults = input.examResults.map(r => {
+    const dersler = [
+      `Türkçe: ${r.turkce.net.toFixed(2)}`,
+      `Mat: ${r.mat.net.toFixed(2)}`,
+      `Fen: ${r.fen.net.toFixed(2)}`,
+      `Tarih: ${r.tarih.net.toFixed(2)}`,
+      `Din: ${r.din.net.toFixed(2)}`,
+      `İng: ${r.ing.net.toFixed(2)}`
+    ].join(', ');
+    
+    const yanlisYapilanKonular = [
+      ...r.turkce.kazanimlar, ...r.mat.kazanimlar, ...r.fen.kazanimlar, 
+      ...r.tarih.kazanimlar, ...r.din.kazanimlar, ...r.ing.kazanimlar
+    ]
+    .filter(k => k.sonuc === 'Y')
+    .map(k => k.konu)
+    .join(', ') || "Yok";
+
+    return `Deneme: ${r.exam_name}, Puan: ${r.toplam_puan.toFixed(2)}, Net: ${r.toplam_net.toFixed(2)} (Ders Netleri: ${dersler}). Yanlış yapılan konular: ${yanlisYapilanKonular}`;
+  }).join('\n');
 
   return analyzeStudentReportFlow({
     studentName: input.studentName,
@@ -78,13 +107,13 @@ const prompt = ai.definePrompt({
   name: 'analyzeStudentReportPrompt',
   input: {schema: PromptInputSchema},
   output: {schema: AnalyzeStudentReportOutputSchema},
-  prompt: `Sen LGS konusunda uzman bir eğitim danışmanısın. Sana verilen öğrenci bilgilerini ve deneme sınavı sonuçlarını analiz ederek, doğrudan öğrenciye hitap eden, kişisel bir rapor hazırla.
+  prompt: `Sen LGS konusunda uzman bir eğitim danışmanısın. Sana verilen öğrenci bilgilerini ve deneme sınavı sonuçlarını (konu detayları dahil) analiz ederek, doğrudan öğrenciye hitap eden, kişisel bir rapor hazırla.
 
 Rapor aşağıdaki gibi yapılandırılmalıdır:
 1.  **summary:** Genel akademik performansını, denemeler arasındaki değişimini ve genel potansiyelini özetleyen, motive edici bir giriş paragrafı yaz. Sana verilen metin formatındaki sonuçları yorumlayarak başla. "Sevgili {{{studentName}}}, eldeki verilere göre..." gibi kişisel bir başlangıç yap.
-2.  **strengths:** İstikrarlı bir şekilde başarılı olduğun dersleri ve konuları vurgulayan 2-3 maddelik bir liste oluştur. "Özellikle Türkçe dersindeki yüksek netlerin, okuduğunu anlama becerinin ne kadar gelişmiş olduğunu gösteriyor." gibi spesifik ve övücü ol.
-3.  **areasForImprovement:** Gelişmesi gereken, netlerinin düşük veya değişken olduğu dersleri tespit eden 2-3 maddelik bir liste oluştur. "Matematik dersinde bazı konularda zorlandığını görüyoruz, ancak düzenli tekrarla bu açığı kapatabilirsin." gibi yapıcı ve umut verici bir dil kullan. Özellikle LGS'de katsayısı yüksek olan derslerdeki (Matematik, Fen, Türkçe) duruma dikkat çek.
-4.  **roadmap:** Performansını artırmak için 3-4 adımlık somut ve uygulanabilir bir yol haritası oluştur. Her adım için bir 'title' ve 'description' alanı olmalıdır. Başlıklar kısa ve eyleme yönelik olmalı (örn: "Soru Çözüm Teknikleri", "Haftalık Tekrar Programı Oluşturma"). Açıklamalar net ve anlaşılır olmalı.
+2.  **strengths:** İstikrarlı bir şekilde başarılı olduğun dersleri ve ÖZELLİKLE konu başlıklarını vurgulayan 2-3 maddelik bir liste oluştur. "Matematik dersinde 'Çarpanlar ve Katlar' konusundaki başarın harika!" gibi spesifik ve övücü ol.
+3.  **areasForImprovement:** Gelişmesi gereken, netlerinin düşük veya değişken olduğu dersleri ve ÖZELLİKLE yanlış yaptığı spesifik konu başlıklarını tespit eden 2-3 maddelik bir liste oluştur. "Fen Bilimleri dersinde 'Mevsimler ve İklim' konusunda bazı zorluklar yaşadığını görüyoruz. Bu konuyu tekrar etmen faydalı olabilir." gibi yapıcı ve umut verici bir dil kullan. Özellikle LGS'de katsayısı yüksek olan derslerdeki (Matematik, Fen, Türkçe) konu eksiklerine dikkat çek.
+4.  **roadmap:** Performansını artırmak için 3-4 adımlık somut ve uygulanabilir bir yol haritası oluştur. Önerilerini, belirlediğin konu eksikliklerine göre kişiselleştir. Her adım için bir 'title' ve 'description' alanı olmalıdır. Başlıklar kısa ve eyleme yönelik olmalı (örn: "Yanlış Yapılan Konulara Odaklan", "Haftalık Tekrar Programı Oluşturma"). Açıklamalar net ve anlaşılır olmalı.
 
 Tüm metinleri profesyonel, yapıcı ve motive edici bir dille yaz.
 
@@ -93,7 +122,7 @@ Tüm metinleri profesyonel, yapıcı ve motive edici bir dille yaz.
 - Sınıf: {{{className}}}
 - Analiz Edilen Deneme: {{{examName}}}
 
-Analiz Edilecek Deneme Sonuçları Özeti:
+Analiz Edilecek Deneme Sonuçları Özeti (Konu Detayları Dahil):
 {{{examResultsAsText}}}
 
 Lütfen sadece 'summary', 'strengths', 'areasForImprovement' ve 'roadmap' alanlarını doldurarak bir JSON çıktısı üret.`,

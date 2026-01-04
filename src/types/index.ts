@@ -1,4 +1,18 @@
+
+export interface KonuAnalizi {
+  konu: string;
+  sonuc: 'D' | 'Y' | 'B'; // Doğru, Yanlış, Boş
+}
+
+export interface DersAnalizi {
+  dogru: number;
+  yanlis: number;
+  net: number;
+  kazanimlar: KonuAnalizi[];
+}
+
 export interface StudentExamResult {
+  id?: string;
   exam_name: string;
   date: string;
   class: string;
@@ -8,25 +22,14 @@ export interface StudentExamResult {
   toplam_yanlis: number;
   toplam_net: number;
   toplam_puan: number;
-  turkce_d: number;
-  turkce_y: number;
-  turkce_net: number;
-  tarih_d: number;
-  tarih_y: number;
-  tarih_net: number;
-  din_d: number;
-  din_y: number;
-  din_net: number;
-  ing_d: number;
-  ing_y: number;
-  ing_net: number;
-  mat_d: number;
-  mat_y: number;
-  mat_net: number;
-  fen_d: number;
-  fen_y: number;
-  fen_net: number;
+  turkce: DersAnalizi;
+  mat: DersAnalizi;
+  fen: DersAnalizi;
+  tarih: DersAnalizi;
+  din: DersAnalizi;
+  ing: DersAnalizi;
 }
+
 
 export interface ExamStats {
   exam_name: string;

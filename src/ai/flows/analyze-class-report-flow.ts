@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Sınıf deneme sınavı sonuçlarını analiz ederek genel öneriler sunan bir AI akışı.
@@ -8,8 +9,19 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { StudentExamResult } from '@/types';
 import { z } from 'genkit';
+
+const KonuAnaliziSchema = z.object({
+    konu: z.string(),
+    sonuc: z.enum(['D', 'Y', 'B']),
+});
+
+const DersAnaliziSchema = z.object({
+    dogru: z.number(),
+    yanlis: z.number(),
+    net: z.number(),
+    kazanimlar: z.array(KonuAnaliziSchema),
+});
 
 const StudentExamResultSchema = z.object({
     exam_name: z.string(),
@@ -21,12 +33,12 @@ const StudentExamResultSchema = z.object({
     toplam_yanlis: z.number(),
     toplam_net: z.number(),
     toplam_puan: z.number(),
-    turkce_d: z.number(), turkce_y: z.number(), turkce_net: z.number(),
-    tarih_d: z.number(), tarih_y: z.number(), tarih_net: z.number(),
-    din_d: z.number(), din_y: z.number(), din_net: z.number(),
-    ing_d: z.number(), ing_y: z.number(), ing_net: z.number(),
-    mat_d: z.number(), mat_y: z.number(), mat_net: z.number(),
-    fen_d: z.number(), fen_y: z.number(), fen_net: z.number(),
+    turkce: DersAnaliziSchema,
+    mat: DersAnaliziSchema,
+    fen: DersAnaliziSchema,
+    tarih: DersAnaliziSchema,
+    din: DersAnaliziSchema,
+    ing: DersAnaliziSchema,
 });
 
 
@@ -39,8 +51,8 @@ export type AnalyzeClassReportInput = z.infer<typeof AnalyzeClassReportInputSche
 
 const AnalyzeClassReportOutputSchema = z.object({
   summary: z.string().describe('Sınıfın genel durumunu, ortalamalarını ve potansiyelini özetleyen bir giriş paragrafı.'),
-  strengths: z.array(z.string()).describe('Sınıfın kolektif olarak güçlü olduğu dersleri ve alanları belirten 2-3 madde.'),
-  areasForImprovement: z.array(z.string()).describe('Sınıfın kolektif olarak desteklenmesi gereken dersleri veya konuları belirten 2-3 madde.'),
+  strengths: z.array(z.string()).describe('Sınıfın kolektif olarak güçlü olduğu dersleri ve konuları belirten 2-3 madde.'),
+  areasForImprovement: z.array(z.string()).describe('Sınıfın kolektif olarak desteklenmesi gereken dersleri veya en çok yanlış yapılan konuları belirten 2-3 madde.'),
   roadmap: z.array(z.object({
     title: z.string().describe('Yol haritası adımının başlığı.'),
     description: z.string().describe('Adımın detaylı açıklaması.'),
@@ -55,26 +67,43 @@ export async function analyzeClassReport(
 ): Promise<AnalyzeClassReportOutput> {
   
   const studentCount = new Set(input.examResults.map(r => r.student_no)).size;
-  
-  const totalNet = input.examResults.reduce((sum, r) => sum + r.toplam_net, 0);
-  const totalScore = input.examResults.reduce((sum, r) => sum + r.toplam_puan, 0);
   const entryCount = input.examResults.length;
   
   if (entryCount === 0) {
     throw new Error("Analiz için veri bulunamadı.");
   }
   
-  const avgNet = totalNet / entryCount;
-  const avgScore = totalScore / entryCount;
+  const avgNet = input.examResults.reduce((sum, r) => sum + r.toplam_net, 0) / entryCount;
+  const avgScore = input.examResults.reduce((sum, r) => sum + r.toplam_puan, 0) / entryCount;
   
-  const avgTurkceNet = input.examResults.reduce((sum, r) => sum + r.turkce_net, 0) / entryCount;
-  const avgMatNet = input.examResults.reduce((sum, r) => sum + r.mat_net, 0) / entryCount;
-  const avgFenNet = input.examResults.reduce((sum, r) => sum + r.fen_net, 0) / entryCount;
-  const avgTarihNet = input.examResults.reduce((sum, r) => sum + r.tarih_net, 0) / entryCount;
-  const avgDinNet = input.examResults.reduce((sum, r) => sum + r.din_net, 0) / entryCount;
-  const avgIngNet = input.examResults.reduce((sum, r) => sum + r.ing_net, 0) / entryCount;
+  const avgTurkceNet = input.examResults.reduce((sum, r) => sum + r.turkce.net, 0) / entryCount;
+  const avgMatNet = input.examResults.reduce((sum, r) => sum + r.mat.net, 0) / entryCount;
+  const avgFenNet = input.examResults.reduce((sum, r) => sum + r.fen.net, 0) / entryCount;
+  const avgTarihNet = input.examResults.reduce((sum, r) => sum + r.tarih.net, 0) / entryCount;
+  const avgDinNet = input.examResults.reduce((sum, r) => sum + r.din.net, 0) / entryCount;
+  const avgIngNet = input.examResults.reduce((sum, r) => sum + r.ing.net, 0) / entryCount;
 
-  const summaryText = `Analiz edilen "${input.examName}" kapsamındaki ${entryCount} sınav sonucuna göre, sınıfta ${studentCount} öğrenci bulunmaktadır. Sınıfın genel net ortalaması ${avgNet.toFixed(2)}, puan ortalaması ise ${avgScore.toFixed(2)}'dir. Ders bazlı ortalama netler şöyledir: Türkçe ${avgTurkceNet.toFixed(2)}, Matematik ${avgMatNet.toFixed(2)}, Fen Bilimleri ${avgFenNet.toFixed(2)}, T.C. İnkılap Tarihi ${avgTarihNet.toFixed(2)}, Din Kültürü ${avgDinNet.toFixed(2)}, İngilizce ${avgIngNet.toFixed(2)}.`;
+  // Sınıf genelinde en çok yanlış yapılan konuları bul
+  const konuYanlislari: { [key: string]: number } = {};
+  input.examResults.forEach(result => {
+    Object.values(result).forEach(ders => {
+      if (ders && Array.isArray(ders.kazanimlar)) {
+        ders.kazanimlar.forEach((kazanim: any) => {
+          if (kazanim.sonuc === 'Y') {
+            konuYanlislari[kazanim.konu] = (konuYanlislari[kazanim.konu] || 0) + 1;
+          }
+        });
+      }
+    });
+  });
+
+  const enCokYanlisYapilanKonular = Object.entries(konuYanlislari)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 5)
+    .map(([konu, sayi]) => `${konu} (${sayi} yanlış)`)
+    .join(', ');
+
+  const summaryText = `Analiz edilen "${input.examName}" kapsamındaki ${entryCount} sınav sonucuna göre, sınıfta ${studentCount} öğrenci bulunmaktadır. Sınıfın genel net ortalaması ${avgNet.toFixed(2)}, puan ortalaması ise ${avgScore.toFixed(2)}'dir. Ders bazlı ortalama netler şöyledir: Türkçe ${avgTurkceNet.toFixed(2)}, Matematik ${avgMatNet.toFixed(2)}, Fen Bilimleri ${avgFenNet.toFixed(2)}, T.C. İnkılap Tarihi ${avgTarihNet.toFixed(2)}, Din Kültürü ${avgDinNet.toFixed(2)}, İngilizce ${avgIngNet.toFixed(2)}. Sınıf genelinde en çok zorlanılan konular: ${enCokYanlisYapilanKonular || 'Belirlenmedi'}.`;
 
   return analyzeClassReportFlow({
     className: input.className,
@@ -93,13 +122,13 @@ const prompt = ai.definePrompt({
   name: 'analyzeClassReportPrompt',
   input: {schema: PromptInputSchema},
   output: {schema: AnalyzeClassReportOutputSchema},
-  prompt: `Sen LGS konusunda uzman bir eğitim danışmanısın. Sana verilen sınıf bilgilerini ve deneme sınavı sonuçları özetini analiz ederek, o sınıfın kolektif başarısı hakkında bir rapor hazırla.
+  prompt: `Sen LGS konusunda uzman bir eğitim danışmanısın. Sana verilen sınıf bilgilerini ve deneme sınavı sonuçları özetini (en çok yanlış yapılan konular dahil) analiz ederek, o sınıfın kolektif başarısı hakkında bir rapor hazırla.
 
 Rapor aşağıdaki gibi yapılandırılmalıdır:
 1.  **summary:** Sınıfın genel akademik durumunu, ortalamalarını ve potansiyelini özetleyen bir giriş paragrafı yaz.
 2.  **strengths:** Sınıfın bir bütün olarak en başarılı olduğu dersleri veya konuları vurgulayan 2-3 maddelik bir liste oluştur.
-3.  **areasForImprovement:** Sınıfın genel olarak zorlandığı, ortalamanın düşük olduğu dersleri veya konuları tespit eden 2-3 maddelik bir liste oluştur.
-4.  **roadmap:** Sınıfın kolektif başarısını artırmak için öğretmenlerin ve yönetimin atabileceği 3-4 adımlık somut ve uygulanabilir bir yol haritası oluştur. Her adım için bir 'title' ve 'description' alanı olmalıdır.
+3.  **areasForImprovement:** Sınıfın genel olarak zorlandığı, ortalamanın düşük olduğu dersleri ve ÖZELLİKLE en çok yanlış yapılan spesifik konu başlıklarını tespit eden 2-3 maddelik bir liste oluştur. Bu, raporun en önemli kısmıdır.
+4.  **roadmap:** Sınıfın kolektif başarısını artırmak için öğretmenlerin ve yönetimin atabileceği 3-4 adımlık somut ve uygulanabilir bir yol haritası oluştur. Önerilerini, sınıfın zorlandığı konulara odakla (örn: "Topluca 'Kareköklü Sayılar' konusu tekrarı yapılabilir."). Her adım için bir 'title' ve 'description' alanı olmalıdır.
 
 Tüm metni profesyonel, yapıcı ve yol gösterici bir dille yaz.
 
@@ -107,7 +136,7 @@ Sınıf Bilgileri:
 - Sınıf Adı: {{{className}}}
 - Analiz Edilen Deneme: {{{examName}}}
 
-Sınıf Özeti ve Ortalama Netler:
+Sınıf Özeti ve Ortalama Netler (En Çok Yanlış Yapılan Konular Dahil):
 {{{classSummary}}}
 
 Lütfen sadece 'summary', 'strengths', 'areasForImprovement' ve 'roadmap' alanlarını doldurarak bir JSON çıktısı üret.`,
@@ -124,5 +153,3 @@ const analyzeClassReportFlow = ai.defineFlow(
     return output!;
   }
 );
-
-    

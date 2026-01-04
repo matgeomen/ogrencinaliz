@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -243,12 +244,12 @@ function StudentReport() {
                                             return (
                                                 <TableRow key={result.id}>
                                                     <TableCell className="font-medium whitespace-nowrap">{result.exam_name}</TableCell>
-                                                    <TableCell className="text-right">{result.turkce_net.toFixed(2)}</TableCell>
-                                                    <TableCell className="text-right">{result.mat_net.toFixed(2)}</TableCell>
-                                                    <TableCell className="text-right">{result.fen_net.toFixed(2)}</TableCell>
-                                                    <TableCell className="text-right">{result.tarih_net.toFixed(2)}</TableCell>
-                                                    <TableCell className="text-right">{result.din_net.toFixed(2)}</TableCell>
-                                                    <TableCell className="text-right">{result.ing_net.toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right">{result.turkce.net.toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right">{result.mat.net.toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right">{result.fen.net.toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right">{result.tarih.net.toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right">{result.din.net.toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right">{result.ing.net.toFixed(2)}</TableCell>
                                                     <TableCell className="text-right font-medium">{result.toplam_net.toFixed(2)}</TableCell>
                                                     <TableCell className="text-right font-bold text-primary">{result.toplam_puan.toFixed(2)}</TableCell>
                                                     <TableCell className="text-center">

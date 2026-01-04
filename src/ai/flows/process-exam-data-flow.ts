@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Dosya içeriğini (Excel/JSON veya PDF/metin) analiz edip yapılandırılmış sınav sonucu verisine dönüştüren bir AI akışı.
@@ -8,10 +9,20 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { StudentExamResult } from '@/types';
 import { z } from 'genkit';
 
-// types/index.ts dosyasındaki StudentExamResult ile tutarlı olmalı
+const KonuAnaliziSchema = z.object({
+    konu: z.string().describe("Sorunun ait olduğu konu veya kazanım adı."),
+    sonuc: z.enum(['D', 'Y', 'B']).describe("Öğrencinin bu konudaki soruyu Doğru, Yanlış veya Boş olarak yanıtladığını belirtir."),
+});
+
+const DersAnaliziSchema = z.object({
+    dogru: z.number().describe("Dersteki toplam doğru sayısı."),
+    yanlis: z.number().describe("Dersteki toplam yanlış sayısı."),
+    net: z.number().describe("Dersteki toplam net sayısı."),
+    kazanimlar: z.array(KonuAnaliziSchema).describe("Dersteki her bir konu/kazanım için öğrencinin performansını gösteren liste.")
+});
+
 const StudentExamResultSchema = z.object({
     exam_name: z.string().describe("Sınavın adı."),
     date: z.string().describe("Sınavın yapıldığı tarih (YYYY-AA-GG formatında)."),
@@ -22,24 +33,12 @@ const StudentExamResultSchema = z.object({
     toplam_yanlis: z.number().describe("Toplam yanlış sayısı."),
     toplam_net: z.number().describe("Toplam net sayısı."),
     toplam_puan: z.number().describe("Toplam puan."),
-    turkce_d: z.number().optional().default(0),
-    turkce_y: z.number().optional().default(0),
-    turkce_net: z.number().describe("Türkçe dersi neti."),
-    tarih_d: z.number().optional().default(0),
-    tarih_y: z.number().optional().default(0),
-    tarih_net: z.number().describe("T.C. İnkılap Tarihi ve Atatürkçülük dersi neti."),
-    din_d: z.number().optional().default(0),
-    din_y: z.number().optional().default(0),
-    din_net: z.number().describe("Din Kültürü ve Ahlak Bilgisi dersi neti."),
-    ing_d: z.number().optional().default(0),
-    ing_y: z.number().optional().default(0),
-    ing_net: z.number().describe("İngilizce dersi neti."),
-    mat_d: z.number().optional().default(0),
-    mat_y: z.number().optional().default(0),
-    mat_net: z.number().describe("Matematik dersi neti."),
-    fen_d: z.number().optional().default(0),
-    fen_y: z.number().optional().default(0),
-    fen_net: z.number().describe("Fen Bilimleri dersi neti."),
+    turkce: DersAnaliziSchema,
+    mat: DersAnaliziSchema,
+    fen: DersAnaliziSchema,
+    tarih: DersAnaliziSchema,
+    din: DersAnaliziSchema,
+    ing: DersAnaliziSchema,
 });
 
 const ProcessExamDataInputSchema = z.object({
@@ -65,28 +64,22 @@ const prompt = ai.definePrompt({
   name: 'processExamDataPrompt',
   input: {schema: ProcessExamDataInputSchema},
   output: {schema: ProcessExamDataOutputSchema},
-  prompt: `Sen bir veri işleme uzmanısın. Görevin, sana verilen bir dosya içeriğini analiz ederek, içindeki öğrenci sınav sonuçlarını yapılandırılmış bir JSON formatına dönüştürmek.
+  prompt: `Sen bir veri işleme uzmanısın. Görevin, sana verilen bir dosya içeriğini analiz ederek, içindeki öğrenci sınav sonuçlarını, ders ve konu (kazanım) detaylarıyla birlikte yapılandırılmış bir JSON formatına dönüştürmek.
 
 VERİ ANALİZ KURALLARI:
 1.  **Tüm Öğrencileri Bul:** Dosya içeriğindeki tüm öğrencilere ait satırları veya bölümleri bul. Her öğrenci için bir JSON nesnesi oluştur.
-2.  **Alanları Eşleştir:** Sana verilen metin veya JSON içindeki bilgileri, aşağıdaki 'StudentExamResult' şemasındaki alanlarla eşleştir. Sütun adları farklı olabilir (örn: 'Öğrenci Adı' yerine 'Ad Soyad', 'turkce_net' yerine 'Türkçe Net'). Bu farklılıkları anla ve doğru alanlara ata.
-3.  **Eksik Verileri Yönet:**
+2.  **Genel Bilgileri Eşleştir:** Metin veya JSON içindeki bilgileri, 'StudentExamResult' şemasındaki genel alanlarla ('exam_name', 'date', 'class', 'student_no', 'student_name', 'toplam_dogru', 'toplam_yanlis', 'toplam_net', 'toplam_puan') eşleştir. Sütun adları farklı olabilir (örn: 'Öğrenci Adı' yerine 'Ad Soyad'). Bu farklılıkları anla ve doğru alanlara ata.
+3.  **Ders ve Konu (Kazanım) Analizi:**
+    *   Her bir ders (Türkçe, Matematik, Fen, Tarih, Din, İngilizce) için ayrı bir analiz yap.
+    *   Eğer içerikte konu/kazanım detayı varsa (örn: "Üslü İfadeler: D", "Sözcükte Anlam: Y"), bu bilgiyi 'kazanimlar' dizisine ekle. Her bir konu için, öğrencinin cevabını 'D' (Doğru), 'Y' (Yanlış), veya 'B' (Boş) olarak 'sonuc' alanına kaydet.
+    *   Eğer konu detayı yoksa, 'kazanimlar' dizisini boş bırak.
+    *   Her ders için toplam doğru, yanlış ve net sayılarını ilgili ders nesnesindeki ('turkce', 'mat', vb.) 'dogru', 'yanlis', 'net' alanlarına ata. Eğer bu değerler yoksa, kazanım sonuçlarından hesaplamaya çalış.
+4.  **Eksik Verileri Yönet:**
     *   Eğer 'exam_name' (sınav adı) içerikte yoksa, bunu dosya adından ({{{fileName}}}) çıkarmaya çalış. Eğer yine bulamazsan, 'Bilinmeyen Sınav' olarak ayarla.
     *   Eğer 'date' (tarih) içerikte yoksa, bugünün tarihini (YYYY-AA-GG formatında) kullan.
-    *   Eğer 'class' (sınıf) yoksa, 'N/A' olarak ayarla.
-    *   Doğru (örn: turkce_d) ve yanlış (örn: turkce_y) sayıları yoksa, bu alanları 0 olarak bırak ama net alanını mutlaka doldur.
-    *   Eğer bir dersin neti yoksa (örn: 'tarih_net'), onu 0 olarak ayarla. Özellikle 'tarih', 'din', 'ing' gibi dersler bazen olmayabilir.
-4.  **Veri Tipi Dönüşümü:** Tüm sayısal alanların (puan, net, doğru, yanlış sayıları) number tipinde olduğundan emin ol. Virgüllü sayıları noktaya dönüştür.
-5.  **Çıktı Formatı:** Sonuçları, 'results' adında bir anahtarın içinde bir JSON dizisi olarak döndür. Her dizi elemanı, bir öğrencinin sınav sonucunu temsil eden ve 'StudentExamResult' şemasına uyan bir nesne olmalıdır.
-
-ÖRNEK GİRDİ (EXCEL'DEN JSON'A):
-'[{"Sınav Adı": "Deneme 1", "Tarih": "2024-05-20", "Sınıf": "8A", "No": 123, "Ad Soyad": "Ali Veli", "Toplam Net": 75.5, "Puan": 450.7, "Türkçe N.": 18.5, "Mat N.": 15, ...}]'
-
-ÖRNEK GİRDİ (PDF'TEN METİN):
-"LGS Deneme Sınavı Sonuçları - 21.05.2024
-8-A Sınıfı
-101 Ayşe Yılmaz   Türkçe: 17.33 Mat: 12.00 Fen: 18.67 ... Toplam Puan: 412.50
-102 Veli Can      Türkçe: 15.00 Mat: 19.33 Fen: 17.00 ... Toplam Puan: 460.00"
+    *   Eğer bir ders hiç yoksa (örn: bazı sınavlarda Din Kültürü olmayabilir), o ders için 'dogru', 'yanlis', 'net' değerlerini 0 yap ve 'kazanimlar' dizisini boş bırak.
+5.  **Veri Tipi Dönüşümü:** Tüm sayısal alanların number tipinde olduğundan emin ol. Virgüllü sayıları noktaya dönüştür.
+6.  **Çıktı Formatı:** Sonuçları, 'results' adında bir anahtarın içinde bir JSON dizisi olarak döndür. Her dizi elemanı, bir öğrencinin sınav sonucunu temsil eden ve 'StudentExamResult' şemasına uyan bir nesne olmalıdır.
 
 ANALİZ EDİLECEK DOSYA BİLGİLERİ:
 - Dosya Adı: {{{fileName}}}

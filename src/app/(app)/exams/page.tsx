@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useMemo, useState } from 'react';
@@ -25,12 +26,12 @@ interface ExamStats {
 }
 
 const lessonKeys = [
-  { key: 'turkce_net', name: 'Türkçe' },
-  { key: 'mat_net', name: 'Matematik' },
-  { key: 'fen_net', name: 'Fen Bilimleri' },
-  { key: 'tarih_net', name: 'T.C. İnkılap Tarihi' },
-  { key: 'din_net', name: 'Din Kültürü' },
-  { key: 'ing_net', name: 'İngilizce' },
+  { key: 'turkce', name: 'Türkçe' },
+  { key: 'mat', name: 'Matematik' },
+  { key: 'fen', name: 'Fen Bilimleri' },
+  { key: 'tarih', name: 'T.C. İnkılap Tarihi' },
+  { key: 'din', name: 'Din Kültürü' },
+  { key: 'ing', name: 'İngilizce' },
 ];
 
 const CHART_COLORS = [
@@ -66,7 +67,7 @@ function ExamDetailModal({ examName }: { examName: string }) {
     if (studentCount === 0) return [];
     return lessonKeys.map(lesson => ({
       name: lesson.name,
-      'Ort. Net': parseFloat((examResults.reduce((acc, s) => acc + (s[lesson.key as keyof StudentExamResult] as number), 0) / studentCount).toFixed(2)),
+      'Ort. Net': parseFloat((examResults.reduce((acc, s) => acc + (s[lesson.key as keyof StudentExamResult] as any).net, 0) / studentCount).toFixed(2)),
     }));
   }, [examResults]);
   

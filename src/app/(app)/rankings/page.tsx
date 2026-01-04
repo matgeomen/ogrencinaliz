@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useMemo, useState } from 'react';
@@ -8,9 +9,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { StudentExamResult } from '@/types';
+import { DersAnalizi, StudentExamResult } from '@/types';
 
-type SortKey = keyof StudentExamResult | 'rank';
+type SortKey = keyof StudentExamResult | 'rank' | 'turkce_net' | 'mat_net' | 'fen_net' | 'tarih_net' | 'din_net' | 'ing_net';
 
 const sortableColumns: { key: SortKey, label: string }[] = [
   { key: 'rank', label: 'Sıra' },
@@ -30,42 +31,44 @@ export default function RankingsPage() {
   const { studentData, selectedExam, loading } = useData();
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'ascending' | 'descending' }>({ key: 'toplam_puan', direction: 'descending' });
 
+  const getDersNet = (ders: DersAnalizi) => ders?.net || 0;
+
   const sortedData = useMemo(() => {
     const examData = studentData.filter(d => d.exam_name === selectedExam);
     if (examData.length === 0) return [];
 
     let sortableItems = [...examData];
-
-    if (sortConfig.key !== 'rank' && sortConfig.key !== 'student_name' && sortConfig.key !== 'class') {
-      sortableItems.sort((a, b) => {
-        const aValue = a[sortConfig.key as keyof StudentExamResult] as number || 0;
-        const bValue = b[sortConfig.key as keyof StudentExamResult] as number || 0;
-
-        if (aValue < bValue) {
-          return sortConfig.direction === 'ascending' ? -1 : 1;
-        }
-        if (aValue > bValue) {
-          return sortConfig.direction === 'ascending' ? 1 : -1;
-        }
-        return a.student_name.localeCompare(b.student_name);
-      });
-    }
     
+    sortableItems.sort((a, b) => {
+        let aValue, bValue;
+        
+        if (sortConfig.key.endsWith('_net')) {
+            const dersKey = sortConfig.key.replace('_net', '') as keyof Pick<StudentExamResult, 'turkce' | 'mat' | 'fen' | 'tarih' | 'din' | 'ing'>;
+            aValue = a[dersKey]?.net ?? 0;
+            bValue = b[dersKey]?.net ?? 0;
+        } else if (['student_name', 'class'].includes(sortConfig.key)) {
+             aValue = a[sortConfig.key as keyof StudentExamResult] as string;
+             bValue = b[sortConfig.key as keyof StudentExamResult] as string;
+             return sortConfig.direction === 'ascending' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+        } else {
+            aValue = a[sortConfig.key as keyof StudentExamResult] as number || 0;
+            bValue = b[sortConfig.key as keyof StudentExamResult] as number || 0;
+        }
+
+        if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
+        
+        // Secondary sort by name
+        return a.student_name.localeCompare(b.student_name);
+    });
+    
+    // Add rank after primary sorting
     let rankedData = sortableItems.map((item, index) => ({ ...item, rank: index + 1 }));
 
-    if (sortConfig.key === 'rank' || sortConfig.key === 'class' || sortConfig.key === 'student_name') {
+    // If sorting by rank itself, just sort by the rank number
+    if (sortConfig.key === 'rank') {
         rankedData.sort((a,b) => {
-            const aValue = a[sortConfig.key];
-            const bValue = b[sortConfig.key];
-            let comparison = 0;
-            if (typeof aValue === 'string' && typeof bValue === 'string') {
-                comparison = aValue.localeCompare(bValue);
-            } else if (typeof aValue === 'number' && typeof bValue === 'number') {
-                if (aValue < bValue) comparison = -1;
-                if (aValue > bValue) comparison = 1;
-            }
-
-            return sortConfig.direction === 'ascending' ? comparison : -comparison;
+             return sortConfig.direction === 'ascending' ? a.rank - b.rank : b.rank - a.rank;
         });
     }
     
@@ -126,12 +129,12 @@ export default function RankingsPage() {
                           <TableCell className="whitespace-nowrap">{student.class}</TableCell>
                           <TableCell className="text-right whitespace-nowrap">{student.toplam_net.toFixed(2)}</TableCell>
                           <TableCell className="text-right font-semibold text-primary whitespace-nowrap">{student.toplam_puan.toFixed(2)}</TableCell>
-                          <TableCell className="text-right whitespace-nowrap">{student.turkce_net.toFixed(2)}</TableCell>
-                          <TableCell className="text-right whitespace-nowrap">{student.mat_net.toFixed(2)}</TableCell>
-                          <TableCell className="text-right whitespace-nowrap">{student.fen_net.toFixed(2)}</TableCell>
-                          <TableCell className="text-right whitespace-nowrap">{student.tarih_net.toFixed(2)}</TableCell>
-                          <TableCell className="text-right whitespace-nowrap">{student.din_net.toFixed(2)}</TableCell>
-                          <TableCell className="text-right whitespace-nowrap">{student.ing_net.toFixed(2)}</TableCell>
+                          <TableCell className="text-right whitespace-nowrap">{getDersNet(student.turkce).toFixed(2)}</TableCell>
+                          <TableCell className="text-right whitespace-nowrap">{getDersNet(student.mat).toFixed(2)}</TableCell>
+                          <TableCell className="text-right whitespace-nowrap">{getDersNet(student.fen).toFixed(2)}</TableCell>
+                          <TableCell className="text-right whitespace-nowrap">{getDersNet(student.tarih).toFixed(2)}</TableCell>
+                          <TableCell className="text-right whitespace-nowrap">{getDersNet(student.din).toFixed(2)}</TableCell>
+                          <TableCell className="text-right whitespace-nowrap">{getDersNet(student.ing).toFixed(2)}</TableCell>
                       </TableRow>
                   ))
                   ) : (

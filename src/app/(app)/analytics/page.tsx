@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useMemo, useState } from 'react';
@@ -32,17 +33,17 @@ export default function AnalyticsPage() {
     if (filteredData.length === 0) return [];
     const total = filteredData.length;
     const lessons = [
-      { subject: 'Türkçe', key: 'turkce_net', max: 20 },
-      { subject: 'Matematik', key: 'mat_net', max: 20 },
-      { subject: 'Fen', key: 'fen_net', max: 20 },
-      { subject: 'Tarih', key: 'tarih_net', max: 10 },
-      { subject: 'Din', key: 'din_net', max: 10 },
-      { subject: 'İngilizce', key: 'ing_net', max: 10 },
+      { subject: 'Türkçe', key: 'turkce', max: 20 },
+      { subject: 'Matematik', key: 'mat', max: 20 },
+      { subject: 'Fen', key: 'fen', max: 20 },
+      { subject: 'Tarih', key: 'tarih', max: 10 },
+      { subject: 'Din', key: 'din', max: 10 },
+      { subject: 'İngilizce', key: 'ing', max: 10 },
     ];
 
     return lessons.map(lesson => ({
       subject: lesson.subject,
-      A: parseFloat(((filteredData.reduce((acc, s) => acc + s[lesson.key as keyof typeof s], 0) / total)).toFixed(2)),
+      A: parseFloat(((filteredData.reduce((acc, s) => acc + s[lesson.key as keyof typeof s].net, 0) / total)).toFixed(2)),
       fullMark: lesson.max,
     }));
   }, [filteredData]);
@@ -70,7 +71,7 @@ export default function AnalyticsPage() {
 
       <div className="flex items-center space-x-4">
         <Select value={selectedClass} onValueChange={setSelectedClass}>
-          <SelectTrigger id="class-filter" className="w-[180px]">
+          <SelectTrigger id="class-filter" className="w-full sm:w-[180px]">
             <SelectValue placeholder="Sınıf Seç" />
           </SelectTrigger>
           <SelectContent>

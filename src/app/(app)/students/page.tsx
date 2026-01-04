@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -28,12 +29,12 @@ function StudentDetailModal({ student }: { student: StudentExamResult }) {
   const selectedExamResult = studentAllResults.find(r => r.exam_name === student.exam_name);
 
   const lessonData = selectedExamResult ? [
-    { name: 'Türkçe', net: selectedExamResult.turkce_net },
-    { name: 'Matematik', net: selectedExamResult.mat_net },
-    { name: 'Fen Bilimleri', net: selectedExamResult.fen_net },
-    { name: 'T.C. İnkılap Tarihi', net: selectedExamResult.tarih_net },
-    { name: 'Din Kültürü', net: selectedExamResult.din_net },
-    { name: 'İngilizce', net: selectedExamResult.ing_net },
+    { name: 'Türkçe', net: selectedExamResult.turkce.net },
+    { name: 'Matematik', net: selectedExamResult.mat.net },
+    { name: 'Fen Bilimleri', net: selectedExamResult.fen.net },
+    { name: 'T.C. İnkılap Tarihi', net: selectedExamResult.tarih.net },
+    { name: 'Din Kültürü', net: selectedExamResult.din.net },
+    { name: 'İngilizce', net: selectedExamResult.ing.net },
   ] : [];
 
   return (

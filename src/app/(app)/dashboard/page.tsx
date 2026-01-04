@@ -53,7 +53,7 @@ export default function DashboardPage() {
 
      return lessons.map((lesson, index) => ({
         name: lessonNames[index],
-        'Ortalama Net': parseFloat((examData.reduce((acc, s) => acc + (s as any)[lesson].net, 0) / total).toFixed(2)),
+        'Ortalama Net': parseFloat((examData.reduce((acc, s) => acc + ((s as any)[lesson]?.net || 0), 0) / total).toFixed(2)),
      }));
   }, [examData]);
 

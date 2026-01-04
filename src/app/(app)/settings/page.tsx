@@ -200,11 +200,11 @@ export default function SettingsPage() {
                                 <li>Kenar çubuğundan <span className="font-semibold">"APIs & Services"</span>'e gidin ve Google Sheets API'yi aratıp etkinleştirin (<span className="font-semibold">ENABLE</span>).</li>
                                 <li>
                                     <a href="https://console.cloud.google.com/apis/credentials/consent" target="_blank" rel="noopener noreferrer" className="underline font-medium hover:text-yellow-800">OAuth izin ekranını</a> yapılandırın:
-                                    <ul className="list-disc list-inside pl-4 mt-1">
-                                        <li>Kullanıcı Tipi olarak <span className="font-semibold">"Harici" (External)</span> seçin.</li>
+                                    <ul className="list-disc list-inside pl-4 mt-1 space-y-1">
+                                        <li>Kullanıcı Tipi olarak <span className="font-semibold">"Harici" (External)</span> seçin ve devam edin.</li>
                                         <li>Uygulama adı, kullanıcı desteği e-postası gibi gerekli bilgileri doldurun.</li>
-                                        <li>Kapsamları (Scopes) atlayın.</li>
-                                        <li><span className="font-semibold">"Test kullanıcıları"</span> bölümüne kendi Google e-posta adresinizi ekleyin.</li>
+                                        <li>Kapsamları (Scopes) atlayın, şimdilik bir şey eklemenize gerek yok.</li>
+                                        <li><span className="font-bold text-red-600">ÖNEMLİ:</span> Uygulama "Test" modundayken, <span className="font-semibold">"+ Add Users"</span> butonuna tıklayarak <span className="font-semibold">"Test kullanıcıları"</span> bölümüne kendi Google e-posta adresinizi ekleyin. Aksi takdirde "403" hatası alırsınız.</li>
                                     </ul>
                                 </li>
                                 <li><span className="font-semibold">"Credentials"</span> sekmesinde, <span className="font-semibold">"+ CREATE CREDENTIALS"</span> ile <span className="font-semibold">"OAuth client ID"</span> oluşturun.</li>
@@ -248,3 +248,5 @@ export default function SettingsPage() {
 
     
 }
+
+    

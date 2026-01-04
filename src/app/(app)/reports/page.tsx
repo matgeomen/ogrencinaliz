@@ -242,7 +242,7 @@ function StudentReport() {
                                             const status = getStatus(result.toplam_puan);
                                             return (
                                                 <TableRow key={result.id}>
-                                                    <TableCell className="font-medium">{result.exam_name}</TableCell>
+                                                    <TableCell className="font-medium whitespace-nowrap">{result.exam_name}</TableCell>
                                                     <TableCell className="text-right">{result.turkce_net.toFixed(2)}</TableCell>
                                                     <TableCell className="text-right">{result.mat_net.toFixed(2)}</TableCell>
                                                     <TableCell className="text-right">{result.fen_net.toFixed(2)}</TableCell>
@@ -253,6 +253,7 @@ function StudentReport() {
                                                     <TableCell className="text-right font-bold text-primary">{result.toplam_puan.toFixed(2)}</TableCell>
                                                     <TableCell className="text-center">
                                                         <Badge variant={status.variant} className={cn(
+                                                            'text-xs',
                                                             status.label === 'Çok İyi' && 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200',
                                                             status.label === 'İyi' && 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200',
                                                             status.label === 'Orta' && 'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200',
@@ -793,11 +794,12 @@ function ParentReport() {
                                             const status = getStatus(result.toplam_puan);
                                             return (
                                                 <TableRow key={result.id}>
-                                                    <TableCell className="font-medium">{result.exam_name}</TableCell>
+                                                    <TableCell className="font-medium whitespace-nowrap">{result.exam_name}</TableCell>
                                                     <TableCell className="text-right font-medium">{result.toplam_net.toFixed(2)}</TableCell>
                                                     <TableCell className="text-right font-bold text-primary">{result.toplam_puan.toFixed(2)}</TableCell>
                                                     <TableCell className="text-center">
                                                         <Badge variant={status.variant} className={cn(
+                                                            'text-xs',
                                                             status.label === 'Çok İyi' && 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200',
                                                             status.label === 'İyi' && 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200',
                                                             status.label === 'Orta' && 'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200',
@@ -880,7 +882,7 @@ export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState('student');
 
   const reportTypes = [
-      { id: 'student', title: 'Öğrenci Karnesi', description: 'Bireysel performans', icon: FileText },
+      { id: 'student', title: 'Öğrenci Karnesi', description: 'Bireysel performans', icon: GraduationCap },
       { id: 'class', title: 'Sınıf Raporu', description: 'Sınıf geneli', icon: Users },
       { id: 'parent', title: 'Veli Raporu', description: 'Veli için özet', icon: Home },
   ];

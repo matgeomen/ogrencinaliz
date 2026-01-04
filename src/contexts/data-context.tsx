@@ -39,9 +39,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, [isUserLoading, user, auth]);
   
   const resultsCollection = useMemoFirebase(() => {
-    if (!firestore) return null;
+    // Wait until both firestore and user are available
+    if (!firestore || !user) return null;
     return collection(firestore, 'results');
-  }, [firestore]);
+  }, [firestore, user]);
 
   const { data: studentData, isLoading: isFirestoreLoading } = useCollection<StudentExamResult>(resultsCollection);
 

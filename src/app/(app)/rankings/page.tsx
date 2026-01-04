@@ -116,7 +116,7 @@ export default function RankingsPage() {
                   ))
                   ) : sortedData.length > 0 ? (
                   sortedData.map((student) => (
-                      <TableRow key={student.student_no}>
+                      <TableRow key={student.id}>
                           <TableCell className="whitespace-nowrap">
                               <div className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">{student.rank}</div>
                           </TableCell>

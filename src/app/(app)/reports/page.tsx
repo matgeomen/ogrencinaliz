@@ -241,7 +241,7 @@ function StudentReport() {
                                         {selectedStudentResults.map(result => {
                                             const status = getStatus(result.toplam_puan);
                                             return (
-                                                <TableRow key={result.exam_name}>
+                                                <TableRow key={result.id}>
                                                     <TableCell className="font-medium">{result.exam_name}</TableCell>
                                                     <TableCell className="text-right">{result.turkce_net.toFixed(2)}</TableCell>
                                                     <TableCell className="text-right">{result.mat_net.toFixed(2)}</TableCell>
@@ -609,8 +609,8 @@ function ClassReport() {
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {classDataForTable.map(result => (
-                                                    <TableRow key={`${result.student_no}-${result.exam_name}`}>
+                                                {classDataForTable.map((result, index) => (
+                                                    <TableRow key={`${result.id}-${index}`}>
                                                         <TableCell>{result.student_name}</TableCell>
                                                         <TableCell>{result.exam_name}</TableCell>
                                                         <TableCell className="text-right">{result.toplam_net.toFixed(2)}</TableCell>
@@ -792,7 +792,7 @@ function ParentReport() {
                                         {selectedStudentResults.map(result => {
                                             const status = getStatus(result.toplam_puan);
                                             return (
-                                                <TableRow key={result.exam_name}>
+                                                <TableRow key={result.id}>
                                                     <TableCell className="font-medium">{result.exam_name}</TableCell>
                                                     <TableCell className="text-right font-medium">{result.toplam_net.toFixed(2)}</TableCell>
                                                     <TableCell className="text-right font-bold text-primary">{result.toplam_puan.toFixed(2)}</TableCell>

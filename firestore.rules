@@ -1,126 +1,19 @@
-/**
- * @fileoverview Firestore Security Rules for the LGS Radar application.
- *
- * @description
- * This ruleset provides security for a student and exam management application.
- * It is configured to be secure by default, requiring adjustments to the data model
- * to enable write operations.
- *
- * @philosophy
- * The core philosophy is to allow authenticated users (including anonymous ones)
- * to read all academic data, which is suitable for a prototyping or internal
- * school-wide data viewing tool. However, all write operations (create, update, delete)
- * are disabled by default across all collections. This is a critical security measure
- * due to the absence of ownership fields (like 'creatorId' or 'teacherId') on the
- * data models, making it impossible to authorize who can modify data. To enable writes,
- * the application's data models must be updated to include fields that link data
- * to a specific authenticated user.
- *
- * @structure
- * The database uses a flat structure with several top-level collections:
- * - /exams: Stores details about each exam.
- * - /students: Stores information about each student.
- * - /exam_results: Contains the results for each student on a given exam.
- * - /e_okul_data: Holds school system data for students.
- * - /ai_analyses: Contains AI-generated reports on student or class performance.
- * This segregated structure simplifies rule logic, as each collection can have
- * distinct security requirements without complex path matching.
- *
- * @decisions
- * - **Secure by Default:** All write operations are explicitly disabled (`if false;`). This forces developers to implement a proper authorization model (e.g., adding an 'ownerId' to documents) before data can be modified.
- * - **Authenticated Reads:** Read access (`get`, `list`) is granted to any authenticated user, including those signed in anonymously. This supports a model where the app is a viewer for a shared dataset.
- * - **No User Data Isolation:** Since there are no ownership fields in the data schemas, the rules cannot isolate one user's data from another. All authenticated users can see all data.
- * - **No Data Shape Validation:** In line with the prototyping philosophy, these rules do not validate the shape or type of data fields (e.g., if 'examName' is a string). Validation is focused solely on authorization.
- *
- * @denormalization
- * To enable secure writes in the future, authorization data must be denormalized.
- * For example, to allow a teacher to create an exam, the `/exams/{examId}` document
- * should include a `creatorId` field. The security rule for `create` would then
- * validate that `request.resource.data.creatorId == request.auth.uid`.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper functions for readable and reusable logic
+    // Helper function to check if a user is signed in
     function isSignedIn() {
       return request.auth != null;
     }
-
-    /**
-     * @description Controls access to the collection of exams.
-     * Allows any authenticated user to read exam information but prevents all modifications
-     * until a proper ownership model is implemented.
-     * @path /exams/{examId}
-     * @allow (get) An authenticated user reads a single exam document.
-     * @deny (create) Any user, authenticated or not, attempts to create a new exam.
-     * @principle Secure-by-default: Read access for authenticated users is allowed, but all modifications are disabled until an ownership model is defined in the schema.
-     */
-    match /exams/{examId} {
-      allow get, list: if isSignedIn();
-      // CRITICAL: Cannot implement owner-only writes. The 'Exam' entity is missing an ownership field like 'creatorId' or 'ownerId'.
-      // To enable writes, add an ownership field to your data model and validate it here.
-      allow create, update, delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
-    }
-
-    /**
-     * @description Controls access to the collection of students.
-     * Allows any authenticated user to read student profiles but prevents all modifications.
-     * @path /students/{studentId}
-     * @allow (list) An authenticated user lists all students in the school.
-     * @deny (update) Any user attempts to modify a student's record.
-     * @principle Secure-by-default: Read access for authenticated users is allowed, but all modifications are disabled until an ownership model is defined in the schema.
-     */
-    match /students/{studentId} {
-      allow get, list: if isSignedIn();
-      // CRITICAL: Cannot implement owner-only writes. The 'Student' entity is missing an ownership field like 'creatorId' or 'ownerId'.
-      // To enable writes, add an ownership field to your data model and validate it here.
-      allow create, update, delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
-    }
-
-    /**
-     * @description Controls access to student exam results.
-     * Allows any authenticated user to read exam results but prevents all modifications.
-     * @path /exam_results/{examResultId}
-     * @allow (get) An authenticated user retrieves the results for a specific exam entry.
-     * @deny (create) Any user attempts to submit new exam results.
-     * @principle Secure-by-default: Read access for authenticated users is allowed, but all modifications are disabled until an ownership model is defined in the schema.
-     */
-    match /exam_results/{examResultId} {
-      allow get, list: if isSignedIn();
-      // CRITICAL: Cannot implement owner-only writes. The 'ExamResult' entity is missing an ownership field like 'creatorId' or 'ownerId'.
-      // To enable writes, add an ownership field to your data model and validate it here.
-      allow create, update, delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
-    }
-
-    /**
-     * @description Controls access to data from the e-okul system.
-     * Allows any authenticated user to read this data but prevents all modifications.
-     * @path /e_okul_data/{eOkulDataId}
-     * @allow (list) An authenticated user lists all e-okul data records.
-     * @deny (delete) Any user attempts to delete an e-okul data record.
-     * @principle Secure-by-default: Read access for authenticated users is allowed, but all modifications are disabled until an ownership model is defined in the schema.
-     */
-    match /e_okul_data/{eOkulDataId} {
-      allow get, list: if isSignedIn();
-      // CRITICAL: Cannot implement owner-only writes. The 'EOkulData' entity is missing an ownership field like 'creatorId' or 'ownerId'.
-      // To enable writes, add an ownership field to your data model and validate it here.
-      allow create, update, delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
-    }
-
-    /**
-     * @description Controls access to AI-generated performance analyses.
-     * Allows any authenticated user to read AI analyses but prevents all modifications.
-     * @path /ai_analyses/{aiAnalysisId}
-     * @allow (get) An authenticated user reads a specific AI analysis report.
-     * @deny (create) Any user attempts to create a new AI analysis.
-     * @principle Secure-by-default: Read access for authenticated users is allowed, but all modifications are disabled until an ownership model is defined in the schema.
-     */
-    match /ai_analyses/{aiAnalysisId} {
-      allow get, list: if isSignedIn();
-      // CRITICAL: Cannot implement owner-only writes. The 'AiAnalysis' entity is missing an ownership field like 'creatorId' or 'ownerId'.
-      // To enable writes, add an ownership field to your data model and validate it here.
-      allow create, update, delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+    
+    match /results/{resultId} {
+      // Allow read access to any signed-in user (including anonymous)
+      allow read: if isSignedIn();
+      
+      // Allow write access only if the user is signed in.
+      // For more granular control, you could add a 'userId' field to your documents
+      // and check `request.auth.uid == request.resource.data.userId`.
+      allow write: if isSignedIn();
     }
   }
 }

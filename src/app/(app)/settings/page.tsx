@@ -3,87 +3,29 @@
 
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
-import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Sun, KeyRound, ExternalLink, Trash2, Eye, EyeOff, Moon, Laptop, Link as LinkIcon, FileSpreadsheet, Info, CheckCircle, Settings as SettingsIcon, Sparkles } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Sun, KeyRound, Eye, EyeOff, Moon, Laptop, Settings as SettingsIcon } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import Link from "next/link";
-import { useToast } from "@/hooks/use-toast";
+import { Info } from "lucide-react";
 
 export default function SettingsPage() {
-    const { theme, setTheme, resolvedTheme } = useTheme();
-    const searchParams = useSearchParams();
-    const { toast } = useToast();
+    const { theme, setTheme } = useTheme();
 
     const [showApiKey, setShowApiKey] = useState(false);
-    const [showClientSecret, setShowClientSecret] = useState(false);
     const [mounted, setMounted] = useState(false);
     
-    const [clientId, setClientId] = useState('');
-    const [clientSecret, setClientSecret] = useState('');
-
     useEffect(() => {
         setMounted(true);
-        
-        const success = searchParams.get('success');
-        const error = searchParams.get('error');
-
-        if (success) {
-            toast({
-                title: "Bağlantı Başarılı!",
-                description: "Google Sheets hesabınız başarıyla bağlandı. Canlı verileri görmek için sayfayı yenileyin.",
-            });
-        }
-        if (error) {
-            toast({
-                title: "Bağlantı Kurulamadı",
-                description: "Google kimlik doğrulaması sırasında bir hata oluştu. Lütfen bilgilerinizi kontrol edip tekrar deneyin.",
-                variant: "destructive",
-            });
-        }
-    }, [searchParams, toast]);
-
-    const handleSaveGoogleInfo = () => {
-        // Here you would typically save these to a secure backend
-        // or trigger a function to update environment variables.
-        // For this example, we just show a toast.
-        toast({
-            title: "Bilgiler Kaydedildi",
-            description: "Google Client bilgileriniz başarıyla kaydedildi.",
-        });
-    }
-
-    const handleConnectGoogle = async () => {
-        try {
-            const response = await fetch('/api/auth/google');
-            const data = await response.json();
-            if (data.url) {
-                window.location.href = data.url;
-            } else {
-                throw new Error("Kimlik doğrulama URL'si alınamadı.");
-            }
-        } catch (error) {
-            console.error("Google'a bağlanırken hata:", error);
-            toast({
-                title: "Bağlantı Hatası",
-                description: "Google kimlik doğrulama sayfasına yönlendirilirken bir hata oluştu.",
-                variant: "destructive"
-            });
-        }
-    };
-
+    }, []);
 
     if (!mounted) {
         return null;
     }
-
-    const radioGroupValue = theme;
 
     return (
         <div className="space-y-6">
@@ -99,7 +41,7 @@ export default function SettingsPage() {
                     </CardHeader>
                     <CardContent>
                          <RadioGroup
-                            value={radioGroupValue}
+                            value={theme}
                             onValueChange={setTheme}
                             className="grid max-w-md grid-cols-3 gap-8 pt-2"
                         >
@@ -147,77 +89,6 @@ export default function SettingsPage() {
                         </Alert>
                     </CardContent>
                 </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><FileSpreadsheet className="h-5 w-5"/> Google Sheets Entegrasyonu</CardTitle>
-                        <CardDescription>Verilerinizi Google Sheets'e senkronize edin</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/50">
-                            <div className="flex items-center gap-3">
-                                 <div className="w-2.5 h-2.5 rounded-full bg-slate-400"></div>
-                                 <div>
-                                    <p className="font-semibold">Bağlı Değil</p>
-                                    <p className="text-sm text-muted-foreground">Bağlanmak için aşağıdaki bilgileri girin</p>
-                                 </div>
-                            </div>
-                            <Button onClick={handleConnectGoogle}><LinkIcon className="mr-2 h-4 w-4" /> Bağlan</Button>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                <div className="flex items-center gap-2">
-                                    <Label htmlFor="client-id">Google Client ID</Label>
-                                </div>
-                                <div className="relative">
-                                    <Input id="client-id" placeholder="Client ID..." value={clientId} onChange={(e) => setClientId(e.target.value)} />
-                                </div>
-                            </div>
-                             <div className="space-y-2">
-                                <Label htmlFor="client-secret">Google Client Secret</Label>
-                                <div className="relative">
-                                    <Input id="client-secret" type={showClientSecret ? "text" : "password"} placeholder="Client Secret..." value={clientSecret} onChange={(e) => setClientSecret(e.target.value)} />
-                                     <Button variant="ghost" size="icon" onClick={() => setShowClientSecret(!showClientSecret)} className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7">
-                                        {showClientSecret ? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="flex justify-end">
-                            <Button onClick={handleSaveGoogleInfo} className="w-full sm:w-auto">
-                                <FileSpreadsheet className="mr-2 h-4 w-4"/>
-                                Google Bilgilerini Kaydet
-                            </Button>
-                        </div>
-
-                        <Alert variant="default" className="bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800">
-                          <AlertTitle className="text-yellow-800 dark:text-yellow-300 font-semibold">Google Sheets Kurulumu:</AlertTitle>
-                          <AlertDescription className="text-yellow-700 dark:text-yellow-300/80 text-sm">
-                            <ol className="list-decimal list-inside space-y-2 mt-2">
-                                <li><a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="underline font-medium hover:text-yellow-800">Google Cloud Console'a</a> gidin ve yeni bir proje oluşturun.</li>
-                                <li>Kenar çubuğundan <span className="font-semibold">"APIs & Services"</span>'e gidin ve Google Sheets API'yi aratıp etkinleştirin (<span className="font-semibold">ENABLE</span>).</li>
-                                <li>
-                                    <a href="https://console.cloud.google.com/apis/credentials/consent" target="_blank" rel="noopener noreferrer" className="underline font-medium hover:text-yellow-800">OAuth izin ekranını</a> yapılandırın:
-                                    <ul className="list-disc list-inside pl-4 mt-1 space-y-1">
-                                        <li>Kullanıcı Tipi olarak <span className="font-semibold">"Harici" (External)</span> seçin ve devam edin.</li>
-                                        <li>Uygulama adı, kullanıcı desteği e-postası gibi gerekli bilgileri doldurun.</li>
-                                        <li>Kapsamları (Scopes) atlayın, şimdilik bir şey eklemenize gerek yok.</li>
-                                        <li><span className="font-bold text-red-600">ÖNEMLİ:</span> Uygulama "Test" modundayken, <span className="font-semibold">"+ Add Users"</span> butonuna tıklayarak <span className="font-semibold">"Test kullanıcıları"</span> bölümüne kendi Google e-posta adresinizi ekleyin. Aksi takdirde "403" hatası alırsınız.</li>
-                                    </ul>
-                                </li>
-                                <li><span className="font-semibold">"Credentials"</span> sekmesinde, <span className="font-semibold">"+ CREATE CREDENTIALS"</span> ile <span className="font-semibold">"OAuth client ID"</span> oluşturun.</li>
-                                <li>
-                                    <span className="font-semibold">"Authorized redirect URIs"</span> bölümüne şunu ekleyin:
-                                    <code className="block my-1 p-2 bg-yellow-100 dark:bg-yellow-800/50 rounded text-xs break-all">{process.env.NEXT_PUBLIC_BASE_URL}/api/oauth/sheets/callback</code>
-                                </li>
-                                <li>Oluşturulan Client ID ve Secret'ı yukarıdaki alanlara girin ve kaydedin.</li>
-                            </ol>
-                          </AlertDescription>
-                        </Alert>
-                    </CardContent>
-                </Card>
                 
                 <Card>
                     <CardHeader>
@@ -226,7 +97,7 @@ export default function SettingsPage() {
                     <CardContent className="space-y-4 text-sm">
                         <div className="flex justify-between items-center">
                             <span className="text-muted-foreground">Versiyon</span>
-                            <span className="font-medium">1.2.0</span>
+                            <span className="font-medium">2.0.0 (Firebase)</span>
                         </div>
                         <div className="flex justify-between items-center">
                             <span className="text-muted-foreground">AI Motoru</span>
@@ -234,19 +105,11 @@ export default function SettingsPage() {
                         </div>
                         <div className="flex justify-between items-center">
                             <span className="text-muted-foreground">Veritabanı</span>
-                            <span className="font-medium">MongoDB</span>
-                        </div>
-                         <div className="flex justify-between items-center">
-                            <span className="text-muted-foreground">Bulut Depolama</span>
-                            <span className="font-medium">Google Sheets</span>
+                            <span className="font-medium">Firebase Firestore</span>
                         </div>
                     </CardContent>
                 </Card>
             </div>
         </div>
     );
-
-    
 }
-
-    

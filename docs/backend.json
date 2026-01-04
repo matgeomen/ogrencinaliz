@@ -1,340 +1,88 @@
 {
   "entities": {
-    "Exam": {
+    "StudentExamResult": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Exam",
+      "title": "StudentExamResult",
       "type": "object",
-      "description": "Represents an exam with its details.",
+      "description": "Represents the result of a student for a specific exam.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Exam entity."
-        },
-        "examName": {
+        "exam_name": {
           "type": "string",
           "description": "Name of the exam."
         },
         "date": {
           "type": "string",
-          "description": "Date of the exam.",
-          "format": "date-time"
-        },
-        "averageScore": {
-          "type": "number",
-          "description": "The average score achieved on the exam."
-        },
-        "participationRate": {
-          "type": "number",
-          "description": "The participation rate for the exam."
-        }
-      },
-      "required": [
-        "id",
-        "examName",
-        "date"
-      ]
-    },
-    "Student": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Student",
-      "type": "object",
-      "description": "Represents a student with their personal information.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Student entity."
-        },
-        "studentNo": {
-          "type": "string",
-          "description": "Student number."
-        },
-        "studentName": {
-          "type": "string",
-          "description": "Student name."
+          "description": "Date of the exam."
         },
         "class": {
           "type": "string",
           "description": "Class of the student (e.g., 8-A)."
-        }
+        },
+        "student_no": {
+          "type": "number",
+          "description": "Student number."
+        },
+        "student_name": {
+          "type": "string",
+          "description": "Student name."
+        },
+        "toplam_dogru": { "type": "number" },
+        "toplam_yanlis": { "type": "number" },
+        "toplam_net": { "type": "number" },
+        "toplam_puan": { "type": "number" },
+        "turkce_d": { "type": "number" },
+        "turkce_y": { "type": "number" },
+        "turkce_net": { "type": "number" },
+        "tarih_d": { "type": "number" },
+        "tarih_y": { "type": "number" },
+        "tarih_net": { "type": "number" },
+        "din_d": { "type": "number" },
+        "din_y": { "type": "number" },
+        "din_net": { "type": "number" },
+        "ing_d": { "type": "number" },
+        "ing_y": { "type": "number" },
+        "ing_net": { "type": "number" },
+        "mat_d": { "type": "number" },
+        "mat_y": { "type": "number" },
+        "mat_net": { "type": "number" },
+        "fen_d": { "type": "number" },
+        "fen_y": { "type": "number" },
+        "fen_net": { "type": "number" }
       },
       "required": [
-        "id",
-        "studentNo",
-        "studentName",
-        "class"
-      ]
-    },
-    "ExamResult": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ExamResult",
-      "type": "object",
-      "description": "Represents the result of a student for a specific exam.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the ExamResult entity."
-        },
-        "examId": {
-          "type": "string",
-          "description": "Reference to Exam. (Relationship: Exam 1:N ExamResult)"
-        },
-        "studentId": {
-          "type": "string",
-          "description": "Reference to Student. (Relationship: Student 1:N ExamResult)"
-        },
-        "toplamDogru": {
-          "type": "number",
-          "description": "Total correct answers."
-        },
-        "toplamYanlis": {
-          "type": "number",
-          "description": "Total incorrect answers."
-        },
-        "toplamNet": {
-          "type": "number",
-          "description": "Total net score."
-        },
-        "toplamPuan": {
-          "type": "number",
-          "description": "Total score."
-        },
-        "turkce_d": {
-          "type": "number",
-          "description": "Turkish correct answers."
-        },
-        "turkce_y": {
-          "type": "number",
-          "description": "Turkish incorrect answers."
-        },
-        "turkce_net": {
-          "type": "number",
-          "description": "Turkish net score."
-        },
-        "tarih_d": {
-          "type": "number",
-          "description": "History correct answers."
-        },
-        "tarih_y": {
-          "type": "number",
-          "description": "History incorrect answers."
-        },
-        "tarih_net": {
-          "type": "number",
-          "description": "History net score."
-        },
-        "din_d": {
-          "type": "number",
-          "description": "Religion correct answers."
-        },
-        "din_y": {
-          "type": "number",
-          "description": "Religion incorrect answers."
-        },
-        "din_net": {
-          "type": "number",
-          "description": "Religion net score."
-        },
-        "ing_d": {
-          "type": "number",
-          "description": "English correct answers."
-        },
-        "ing_y": {
-          "type": "number",
-          "description": "English incorrect answers."
-        },
-        "ing_net": {
-          "type": "number",
-          "description": "English net score."
-        },
-        "mat_d": {
-          "type": "number",
-          "description": "Math correct answers."
-        },
-        "mat_y": {
-          "type": "number",
-          "description": "Math incorrect answers."
-        },
-        "mat_net": {
-          "type": "number",
-          "description": "Math net score."
-        },
-        "fen_d": {
-          "type": "number",
-          "description": "Science correct answers."
-        },
-        "fen_y": {
-          "type": "number",
-          "description": "Science incorrect answers."
-        },
-        "fen_net": {
-          "type": "number",
-          "description": "Science net score."
-        }
-      },
-      "required": [
-        "id",
-        "examId",
-        "studentId"
-      ]
-    },
-    "EOkulData": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "EOkulData",
-      "type": "object",
-      "description": "Represents data fetched from e-okul for a student.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the EOkulData entity."
-        },
-        "studentId": {
-          "type": "string",
-          "description": "Reference to Student. (Relationship: Student 1:N EOkulData)"
-        },
-        "dersAdi": {
-          "type": "string",
-          "description": "Name of the course."
-        },
-        "notOrtalamasi": {
-          "type": "number",
-          "description": "Average grade for the course."
-        },
-        "basariDurumu": {
-          "type": "string",
-          "description": "Success status for the course."
-        }
-      },
-      "required": [
-        "id",
-        "studentId",
-        "dersAdi"
-      ]
-    },
-    "AiAnalysis": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "AiAnalysis",
-      "type": "object",
-      "description": "Represents AI-generated analysis for a student or class.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the AiAnalysis entity."
-        },
-        "studentId": {
-          "type": "string",
-          "description": "Reference to Student (optional).  If present, analysis is for a specific student. (Relationship: Student 1:N AiAnalysis)"
-        },
-        "class": {
-          "type": "string",
-          "description": "Class for which the analysis is generated. If studentId is present, this may be redundant, but allows for class-level aggregate analysis."
-        },
-        "analysisReport": {
-          "type": "string",
-          "description": "The AI-generated analysis report text."
-        },
-        "dateGenerated": {
-          "type": "string",
-          "description": "The date and time the analysis was generated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
+        "exam_name",
+        "date",
         "class",
-        "analysisReport",
-        "dateGenerated"
+        "student_no",
+        "student_name",
+        "toplam_net",
+        "toplam_puan"
       ]
     }
   },
   "auth": {
     "providers": [
-      "password",
       "anonymous"
     ]
   },
   "firestore": {
     "structure": [
       {
-        "path": "/exams/{examId}",
+        "path": "/results/{resultId}",
         "definition": {
-          "entityName": "Exam",
+          "entityName": "StudentExamResult",
           "schema": {
-            "$ref": "#/backend/entities/Exam"
+            "$ref": "#/entities/StudentExamResult"
           },
-          "description": "Stores exam details. The 'examId' is a unique identifier for each exam.",
+          "description": "Stores individual student exam results.",
           "params": [
             {
-              "name": "examId",
-              "description": "Unique identifier for the exam."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/students/{studentId}",
-        "definition": {
-          "entityName": "Student",
-          "schema": {
-            "$ref": "#/backend/entities/Student"
-          },
-          "description": "Stores student information. The 'studentId' is a unique identifier for each student.",
-          "params": [
-            {
-              "name": "studentId",
-              "description": "Unique identifier for the student."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/exam_results/{examResultId}",
-        "definition": {
-          "entityName": "ExamResult",
-          "schema": {
-            "$ref": "#/backend/entities/ExamResult"
-          },
-          "description": "Stores exam results for each student. The 'examResultId' is a unique identifier for each result. Includes references to 'examId' and 'studentId'.",
-          "params": [
-            {
-              "name": "examResultId",
+              "name": "resultId",
               "description": "Unique identifier for the exam result."
             }
           ]
         }
-      },
-      {
-        "path": "/e_okul_data/{eOkulDataId}",
-        "definition": {
-          "entityName": "EOkulData",
-          "schema": {
-            "$ref": "#/backend/entities/EOkulData"
-          },
-          "description": "Stores data fetched from e-okul for students. The 'eOkulDataId' is a unique identifier for each record, related to a specific 'studentId'.",
-          "params": [
-            {
-              "name": "eOkulDataId",
-              "description": "Unique identifier for the EOkulData entry."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/ai_analyses/{aiAnalysisId}",
-        "definition": {
-          "entityName": "AiAnalysis",
-          "schema": {
-            "$ref": "#/backend/entities/AiAnalysis"
-          },
-          "description": "Stores AI-generated analyses.  Can be associated with a specific student ('studentId') or a class. Supports class-level and student-specific reports.",
-          "params": [
-            {
-              "name": "aiAnalysisId",
-              "description": "Unique identifier for the AiAnalysis document."
-            }
-          ]
-        }
       }
-    ],
-    "reasoning": "The Firestore structure is designed to manage student exam data for the 'LGS Radar' application, focusing on scalability, security, and ease of querying. Key design decisions include:\n\n1.  **Authorization Independence:** The structure avoids hierarchical `get()` calls in security rules by denormalizing authorization-related data. For example, if access to exam results needs to be restricted to students in a specific class or related to a user role, that information would be duplicated within the `ExamResult` documents.  Since there are no specific authorization constraints, the denormalization requirements are simple.\n2.  **Structural Segregation:** Each top-level collection (`exams`, `students`, `exam_results`, `e_okul_data`, `ai_analyses`) stores a specific type of data. This segregation simplifies security rules. For instance, student data is stored separately from exam data.\n3.  **Access Modeling:**\n    *   **User-Owned Data:** While there isn't explicit user-owned data, the structure supports scenarios where AI analyses could be associated with students using the `/students/{studentId}/ai_analyses/{analysisId}` pattern if needed.\n    *   **Collaborative Data:** If collaboration is implemented in the future (e.g., teachers collaborating on exam creation), a membership map (`members: {uid1: \"role\", uid2: \"role\"}`) could be added to the `exams` documents, with the `members` map replicated to related subcollections as needed.\n4.  **QAPs Support:** The design supports efficient and secure `list` operations.  Since each collection has a homogeneous security posture, rules can efficiently filter data based on denormalized fields. Segregation into separate collections also improves list performance. For example, listing all `ExamResult` documents doesn't require traversing the entire database. This is enhanced by having index definitions for querying.\n\nThis approach allows for robust security rules, scalable data storage, and efficient querying, aligning with the core design principles and strategy mandates."
+    ]
   }
 }

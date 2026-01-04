@@ -13,6 +13,7 @@ import {
   SidebarMenuButton,
   SidebarFooter,
   SidebarInset,
+  SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { DataProvider, useData } from '@/contexts/data-context';
 import {
@@ -47,7 +48,8 @@ import {
   GraduationCap,
   BrainCircuit,
   Database,
-  Settings
+  Settings,
+  PanelLeft
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FirebaseClientProvider } from '@/firebase';
@@ -75,6 +77,11 @@ function AppHeader() {
   if (!isMounted) {
       return (
           <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
+                <div className="flex items-center gap-2 md:hidden">
+                    <SidebarTrigger>
+                        <PanelLeft />
+                    </SidebarTrigger>
+                </div>
                <div className="flex-1">
                     <h1 className="text-lg font-semibold md:hidden">LGS Radar</h1>
                 </div>
@@ -88,8 +95,13 @@ function AppHeader() {
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
-      <div className="flex-1">
-        <h1 className="text-lg font-semibold md:hidden">
+      <div className="flex items-center gap-2 md:hidden">
+        <SidebarTrigger>
+            <PanelLeft />
+        </SidebarTrigger>
+      </div>
+      <div className="flex-1 md:hidden">
+        <h1 className="text-lg font-semibold">
           LGS Radar
         </h1>
       </div>
@@ -151,7 +163,7 @@ function AppSidebar() {
     <Sidebar
       variant="inset"
       collapsible="icon"
-      className="hidden border-r-0 md:flex"
+      className="border-r-0"
     >
       <SidebarHeader>
         <Button variant="ghost" asChild className="h-auto justify-start gap-2 px-2 text-base">

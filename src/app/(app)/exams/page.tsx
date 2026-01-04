@@ -108,7 +108,7 @@ function ExamDetailModal({ examName }: { examName: string }) {
                 <ResponsiveContainer width="100%" height={250}>
                     <BarChart data={lessonAverages}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
+                        <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} tick={{dy: 5}}/>
                         <YAxis />
                         <Tooltip
                             contentStyle={{
@@ -251,10 +251,10 @@ export default function ExamsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Deneme Adı</TableHead>
-                  <TableHead>Tarih</TableHead>
-                  <TableHead>Öğrenci</TableHead>
+                  <TableHead className="hidden sm:table-cell">Tarih</TableHead>
+                  <TableHead className="hidden sm:table-cell">Öğrenci</TableHead>
                   <TableHead>Ort. Puan</TableHead>
-                  <TableHead>Başarı</TableHead>
+                  <TableHead className="hidden sm:table-cell">Başarı</TableHead>
                   <TableHead className="text-center">İşlemler</TableHead>
                 </TableRow>
               </TableHeader>
@@ -269,10 +269,10 @@ export default function ExamsPage() {
                   examStats.map((exam) => (
                     <TableRow key={exam.exam_name}>
                       <TableCell className="font-medium">{exam.exam_name}</TableCell>
-                      <TableCell>{exam.date !== 'N/A' ? new Date(exam.date).toLocaleDateString('tr-TR') : 'N/A'}</TableCell>
-                      <TableCell>{exam.studentCount}</TableCell>
+                      <TableCell className="hidden sm:table-cell">{exam.date !== 'N/A' ? new Date(exam.date).toLocaleDateString('tr-TR') : 'N/A'}</TableCell>
+                      <TableCell className="hidden sm:table-cell">{exam.studentCount}</TableCell>
                       <TableCell>{exam.avgScore.toFixed(2)}</TableCell>
-                      <TableCell>{`%${exam.successRate.toFixed(1)}`}</TableCell>
+                      <TableCell className="hidden sm:table-cell">{`%${exam.successRate.toFixed(1)}`}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex justify-center gap-2">
                             <Dialog>

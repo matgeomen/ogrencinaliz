@@ -130,7 +130,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Ders Bazlı Performans</CardTitle>
@@ -139,9 +139,9 @@ export default function DashboardPage() {
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={lessonAverages}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
+                <XAxis dataKey="name" fontSize={12} tick={{dy: 10}} />
                 <YAxis />
-                <Tooltip />
+                <Tooltip contentStyle={{ background: "hsl(var(--background))", border: "1px solid hsl(var(--border))", borderRadius: "var(--radius)"}}/>
                 <Bar dataKey="Ortalama Net">
                   {lessonAverages.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={LESSON_COLORS[entry.name as keyof typeof LESSON_COLORS] || '#8884d8'} />
@@ -173,7 +173,7 @@ export default function DashboardPage() {
                      <Cell key={`cell-${index}`} fill={entry.color} />
                    ))}
                  </Pie>
-                 <Tooltip />
+                 <Tooltip contentStyle={{ background: "hsl(var(--background))", border: "1px solid hsl(var(--border))", borderRadius: "var(--radius)"}}/>
                  <Legend />
                </PieChart>
              </ResponsiveContainer>

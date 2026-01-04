@@ -14,6 +14,7 @@ import {
   SidebarFooter,
   SidebarInset,
   SidebarTrigger,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { DataProvider, useData } from '@/contexts/data-context';
 import {
@@ -53,6 +54,7 @@ import {
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FirebaseClientProvider } from '@/firebase';
+import { SheetPrimitive } from '@/components/ui/sheet';
 
 const navItems = [
   { href: '/dashboard', label: 'Kontrol Merkezi', icon: LayoutGrid },
@@ -86,7 +88,7 @@ function AppHeader() {
                     <h1 className="text-lg font-semibold md:hidden">LGS Radar</h1>
                 </div>
               <div className="flex flex-1 items-center justify-end gap-4">
-                  <Skeleton className="h-10 w-[250px]" />
+                  <Skeleton className="h-10 w-full max-w-[250px]" />
                   <Skeleton className="h-10 w-10 rounded-full" />
               </div>
           </header>
@@ -105,8 +107,8 @@ function AppHeader() {
           LGS Radar
         </h1>
       </div>
-      <div className="flex flex-1 items-center justify-end gap-4">
-        <div className="w-full max-w-[250px] min-w-[200px]">
+      <div className="flex flex-1 items-center justify-end gap-2 md:gap-4">
+        <div className="w-full max-w-[180px] sm:max-w-[250px] min-w-[150px]">
           <Select
             value={selectedExam}
             onValueChange={setSelectedExam}
@@ -158,6 +160,13 @@ function AppHeader() {
 
 function AppSidebar() {
   const pathname = usePathname();
+  const { isMobile, setOpenMobile } = useSidebar();
+
+  const handleLinkClick = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
 
   return (
     <Sidebar
@@ -181,6 +190,7 @@ function AppSidebar() {
                 asChild
                 isActive={pathname.startsWith(item.href)}
                 tooltip={item.label}
+                onClick={handleLinkClick}
               >
                 <Link href={item.href}>
                   <item.icon />
@@ -194,7 +204,7 @@ function AppSidebar() {
       <SidebarFooter>
          <SidebarMenu>
             <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname.startsWith('/settings')} tooltip="Ayarlar">
+                <SidebarMenuButton asChild isActive={pathname.startsWith('/settings')} tooltip="Ayarlar" onClick={handleLinkClick}>
                     <Link href="/settings">
                         <Settings />
                         <span>Ayarlar</span>

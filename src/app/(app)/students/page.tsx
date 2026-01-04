@@ -66,16 +66,16 @@ function StudentDetailModal({ student }: { student: StudentExamResult }) {
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={lessonData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
+                <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} tick={{dy: 5}}/>
                 <YAxis />
-                <Tooltip />
+                <Tooltip contentStyle={{ background: "hsl(var(--background))", border: "1px solid hsl(var(--border))", borderRadius: "var(--radius)"}}/>
                 <Bar dataKey="net" fill="hsl(var(--primary))" name="Net Sayısı" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
         </div>
         <div>
             <h3 className="font-semibold mb-4">Deneme Geçmişi</h3>
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-60 overflow-y-auto pr-4">
                 {studentAllResults.map(result => (
                     <div key={result.exam_name}>
                         <div className="flex justify-between items-center">
@@ -145,12 +145,11 @@ export default function StudentsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>No</TableHead>
+                  <TableHead className="w-[80px]">No</TableHead>
                   <TableHead>Adı Soyadı</TableHead>
-                  <TableHead>Sınıf</TableHead>
-                  <TableHead className="text-right">Toplam Net</TableHead>
-                  <TableHead className="text-right">Toplam Puan</TableHead>
-                  <TableHead className="text-center">Durum</TableHead>
+                  <TableHead className="hidden md:table-cell">Sınıf</TableHead>
+                  <TableHead className="text-right">Puan</TableHead>
+                  <TableHead className="text-center hidden sm:table-cell">Durum</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -169,11 +168,11 @@ export default function StudentsPage() {
                         <TableRow className="cursor-pointer">
                           <TableCell>{student.student_no}</TableCell>
                           <TableCell className="font-medium">{student.student_name}</TableCell>
-                          <TableCell>{student.class}</TableCell>
-                          <TableCell className="text-right">{student.toplam_net.toFixed(2)}</TableCell>
-                          <TableCell className="text-right">{student.toplam_puan.toFixed(2)}</TableCell>
-                          <TableCell className="text-center">
+                          <TableCell className="hidden md:table-cell">{student.class}</TableCell>
+                          <TableCell className="text-right font-semibold">{student.toplam_puan.toFixed(2)}</TableCell>
+                          <TableCell className="text-center hidden sm:table-cell">
                             <Badge variant={status.variant} className={cn(
+                                'text-xs',
                                 status.label === 'Çok İyi' && 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200',
                                 status.label === 'İyi' && 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200',
                                 status.label === 'Orta' && 'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200',

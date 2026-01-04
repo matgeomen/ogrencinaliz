@@ -67,7 +67,7 @@ function ExamDetailModal({ examName }: { examName: string }) {
     if (studentCount === 0) return [];
     return lessonKeys.map(lesson => ({
       name: lesson.name,
-      'Ort. Net': parseFloat((examResults.reduce((acc, s) => acc + (s[lesson.key as keyof StudentExamResult] as any).net, 0) / studentCount).toFixed(2)),
+      'Ort. Net': parseFloat((examResults.reduce((acc, s) => acc + ((s[lesson.key as keyof StudentExamResult] as any)?.net ?? 0), 0) / studentCount).toFixed(2)),
     }));
   }, [examResults]);
   
@@ -324,3 +324,5 @@ export default function ExamsPage() {
     </div>
   );
 }
+
+    

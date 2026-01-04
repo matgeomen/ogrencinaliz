@@ -1,19 +1,11 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper function to check if a user is signed in
-    function isSignedIn() {
-      return request.auth != null;
-    }
     
-    match /results/{resultId} {
-      // Allow read access to any signed-in user (including anonymous)
-      allow read: if isSignedIn();
-      
-      // Allow write access only if the user is signed in.
-      // For more granular control, you could add a 'userId' field to your documents
-      // and check `request.auth.uid == request.resource.data.userId`.
-      allow write: if isSignedIn();
+    // Kullanıcıların kendi veri koleksiyonlarına erişimini sağlar
+    match /users/{userId}/{documents=**} {
+      // Bir kullanıcının yalnızca kendi belgelerini okumasına ve yazmasına izin verilir.
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }

@@ -29,12 +29,12 @@ function StudentDetailModal({ student }: { student: StudentExamResult }) {
   const selectedExamResult = studentAllResults.find(r => r.exam_name === student.exam_name);
 
   const lessonData = selectedExamResult ? [
-    { name: 'Türkçe', net: selectedExamResult.turkce.net },
-    { name: 'Matematik', net: selectedExamResult.mat.net },
-    { name: 'Fen Bilimleri', net: selectedExamResult.fen.net },
-    { name: 'T.C. İnkılap Tarihi', net: selectedExamResult.tarih.net },
-    { name: 'Din Kültürü', net: selectedExamResult.din.net },
-    { name: 'İngilizce', net: selectedExamResult.ing.net },
+    { name: 'Türkçe', net: selectedExamResult.turkce?.net ?? 0 },
+    { name: 'Matematik', net: selectedExamResult.mat?.net ?? 0 },
+    { name: 'Fen Bilimleri', net: selectedExamResult.fen?.net ?? 0 },
+    { name: 'T.C. İnkılap Tarihi', net: selectedExamResult.tarih?.net ?? 0 },
+    { name: 'Din Kültürü', net: selectedExamResult.din?.net ?? 0 },
+    { name: 'İngilizce', net: selectedExamResult.ing?.net ?? 0 },
   ] : [];
 
   return (
@@ -63,11 +63,11 @@ function StudentDetailModal({ student }: { student: StudentExamResult }) {
       </DialogHeader>
       <div className="py-4 space-y-8">
         <div>
-            <h3 className="font-semibold mb-4">Ders Bazlı Net Dağılımı ({student.exam_name})</h3>
+            <h3 className="font-semibold mb-4 text-sm md:text-base">Ders Bazlı Net Dağılımı ({student.exam_name})</h3>
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={lessonData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} tick={{dy: 5}}/>
+                <XAxis dataKey="name" fontSize={10} tickLine={false} axisLine={false} tick={{dy: 5}}/>
                 <YAxis />
                 <Tooltip contentStyle={{ background: "hsl(var(--background))", border: "1px solid hsl(var(--border))", borderRadius: "var(--radius)"}}/>
                 <Bar dataKey="net" fill="hsl(var(--primary))" name="Net Sayısı" radius={[4, 4, 0, 0]} />
@@ -75,15 +75,15 @@ function StudentDetailModal({ student }: { student: StudentExamResult }) {
             </ResponsiveContainer>
         </div>
         <div>
-            <h3 className="font-semibold mb-4">Deneme Geçmişi</h3>
+            <h3 className="font-semibold mb-4 text-sm md:text-base">Deneme Geçmişi</h3>
             <div className="space-y-4 max-h-60 overflow-y-auto pr-4">
                 {studentAllResults.map(result => (
                     <div key={result.exam_name}>
                         <div className="flex justify-between items-center">
-                            <p className="font-medium">{result.exam_name}</p>
+                            <p className="font-medium text-sm md:text-base">{result.exam_name}</p>
                             <div className="text-right">
-                                <p className="text-sm"><span className="text-muted-foreground">Net:</span> {result.toplam_net.toFixed(2)}</p>
-                                <p className="text-sm font-semibold"><span className="text-muted-foreground">Puan:</span> {result.toplam_puan.toFixed(2)}</p>
+                                <p className="text-xs md:text-sm"><span className="text-muted-foreground">Net:</span> {result.toplam_net.toFixed(2)}</p>
+                                <p className="text-xs md:text-sm font-semibold"><span className="text-muted-foreground">Puan:</span> {result.toplam_puan.toFixed(2)}</p>
                             </div>
                         </div>
                         <Separator className="mt-2" />

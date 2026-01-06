@@ -2,11 +2,6 @@ import type {NextConfig} from 'next';
 require('dotenv').config({ path: './.env' });
 
 const nextConfig: NextConfig = {
-  experimental: {
-    swcPlugins: [
-      ['@genkit-ai/next/swc', {}],
-    ],
-  },
   serverActions: {
     bodySizeLimit: '10mb',
   },

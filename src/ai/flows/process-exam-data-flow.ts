@@ -64,7 +64,7 @@ const prompt = ai.definePrompt({
   name: 'processExamDataPrompt',
   input: {schema: ProcessExamDataInputSchema},
   output: {schema: ProcessExamDataOutputSchema},
-  prompt: `Sen bir veri işleme uzmanısın. Görevin, sana verilen bir dosya içeriğini analiz ederek, içindeki öğrenci sınav sonuçlarını, ders ve konu (kazanım) detaylarıyla birlikte yapılandırılmış bir JSON formatına dönüştürmek.
+  system: `Sen bir veri işleme uzmanısın. Görevin, sana verilen bir dosya içeriğini analiz ederek, içindeki öğrenci sınav sonuçlarını, ders ve konu (kazanım) detaylarıyla birlikte yapılandırılmış bir JSON formatına dönüştürmek.
 
 VERİ ANALİZ KURALLARI:
 1.  **Tüm Öğrencileri Bul:** Dosya içeriğindeki tüm öğrencilere ait satırları veya bölümleri bul. Her öğrenci için bir JSON nesnesi oluştur.
@@ -80,8 +80,8 @@ VERİ ANALİZ KURALLARI:
     *   Eğer bir ders hiç yoksa (örn: bazı sınavlarda Din Kültürü olmayabilir), o ders için 'dogru', 'yanlis', 'net' değerlerini 0 yap ve 'kazanimlar' dizisini boş bırak.
 5.  **Veri Tipi Dönüşümü:** Tüm sayısal alanların number tipinde olduğundan emin ol. Virgüllü sayıları noktaya dönüştür.
 6.  **Çıktı Formatı:** Sonuçları, 'results' adında bir anahtarın içinde bir JSON dizisi olarak döndür. Her dizi elemanı, bir öğrencinin sınav sonucunu temsil eden ve 'StudentExamResult' şemasına uyan bir nesne olmalıdır.
-
-ANALİZ EDİLECEK DOSYA BİLGİLERİ:
+`,
+  prompt: `ANALİZ EDİLECEK DOSYA BİLGİLERİ:
 - Dosya Adı: {{{fileName}}}
 - Dosya İçeriği:
 {{{fileContent}}}

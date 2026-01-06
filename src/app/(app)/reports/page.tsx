@@ -19,6 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import Link from 'next/link';
 
 
 const getStatus = (score: number): { label: string; variant: "default" | "secondary" | "destructive" | "outline" } => {
@@ -93,12 +94,18 @@ function StudentReport() {
             .sort((a,b) => a.student_name.localeCompare(b.student_name));
     }, [studentData, selectedClass]);
     
+    const availableExams = useMemo(() => {
+        if (!selectedStudentNo) return [];
+        const studentExams = new Set(studentData.filter(s => s.student_no.toString() === selectedStudentNo).map(s => s.exam_name));
+        return exams.filter(e => studentExams.has(e));
+    }, [studentData, exams, selectedStudentNo]);
+
     const selectedStudentResults = useMemo(() => {
         if (!selectedStudentNo || selectedExams.length === 0) return [];
         return studentData
-            .filter(s => s.student_no.toString() === selectedStudentNo && (selectedExams.length === exams.length || selectedExams.includes(s.exam_name)))
+            .filter(s => s.student_no.toString() === selectedStudentNo && selectedExams.includes(s.exam_name))
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [studentData, selectedStudentNo, selectedExams, exams]);
+    }, [studentData, selectedStudentNo, selectedExams]);
 
     const handleGenerate = async () => {
         if (!selectedStudentNo || selectedStudentResults.length === 0) {
@@ -119,14 +126,28 @@ function StudentReport() {
             toast({ title: "AI Raporu başarıyla oluşturuldu." });
         } catch (error: any) {
             console.error("AI Analysis Error:", error);
-            toast({ title: "Rapor oluşturulurken bir hata oluştu.", description: error.message, variant: 'destructive' });
+            if (error.message?.includes('API key not found')) {
+                toast({
+                    title: "AI API Anahtarı Eksik",
+                    description: (
+                    <span>
+                        Lütfen AI özelliklerini kullanmak için Ayarlar sayfasından API anahtarınızı girin. 
+                        <Link href="/settings" className="underline font-semibold ml-1">Ayarlara Git</Link>
+                    </span>
+                    ),
+                    variant: "destructive",
+                    duration: 10000,
+                });
+            } else {
+                toast({ title: "Rapor oluşturulurken bir hata oluştu.", description: error.message, variant: 'destructive' });
+            }
         } finally {
             setIsGenerating(false);
         }
     }
     
     const selectedStudentName = studentsInClass.find(s => s.student_no.toString() === selectedStudentNo)?.student_name;
-    const examNameForTitle = selectedExams.length === 0 ? "Deneme Seçilmedi" : selectedExams.length === exams.length ? 'Tüm Denemeler' : selectedExams.join(', ');
+    const examNameForTitle = selectedExams.length === 0 ? "Deneme Seçilmedi" : selectedExams.length === availableExams.length ? 'Tüm Denemeler' : selectedExams.join(', ');
 
     const handleClassChange = (c: string) => {
         setSelectedClass(c);
@@ -143,7 +164,7 @@ function StudentReport() {
         setAiAnalysis(null);
         setSelectedExams(prev => {
             if (exam === 'all') {
-                return prev.length === exams.length ? [] : exams.map(e => e);
+                return prev.length === availableExams.length ? [] : availableExams;
             }
             const newExams = prev.includes(exam) 
                 ? prev.filter(e => e !== exam)
@@ -190,12 +211,12 @@ function StudentReport() {
                                 <DropdownMenuLabel>Deneme Sınavları</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuCheckboxItem
-                                    checked={selectedExams.length === exams.length && exams.length > 0}
+                                    checked={selectedExams.length === availableExams.length && availableExams.length > 0}
                                     onCheckedChange={() => handleExamChange('all')}
                                 >
                                     Tüm Denemeler
                                 </DropdownMenuCheckboxItem>
-                                {exams.map(e => (
+                                {availableExams.map(e => (
                                     <DropdownMenuCheckboxItem
                                         key={e}
                                         checked={selectedExams.includes(e)}
@@ -244,12 +265,12 @@ function StudentReport() {
                                             return (
                                                 <TableRow key={result.id}>
                                                     <TableCell className="font-medium whitespace-nowrap">{result.exam_name}</TableCell>
-                                                    <TableCell className="text-right">{result.turkce.net.toFixed(2)}</TableCell>
-                                                    <TableCell className="text-right">{result.mat.net.toFixed(2)}</TableCell>
-                                                    <TableCell className="text-right">{result.fen.net.toFixed(2)}</TableCell>
-                                                    <TableCell className="text-right">{result.tarih.net.toFixed(2)}</TableCell>
-                                                    <TableCell className="text-right">{result.din.net.toFixed(2)}</TableCell>
-                                                    <TableCell className="text-right">{result.ing.net.toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right">{(result.turkce?.net ?? 0).toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right">{(result.mat?.net ?? 0).toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right">{(result.fen?.net ?? 0).toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right">{(result.tarih?.net ?? 0).toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right">{(result.din?.net ?? 0).toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right">{(result.ing?.net ?? 0).toFixed(2)}</TableCell>
                                                     <TableCell className="text-right font-medium">{result.toplam_net.toFixed(2)}</TableCell>
                                                     <TableCell className="text-right font-bold text-primary">{result.toplam_puan.toFixed(2)}</TableCell>
                                                     <TableCell className="text-center">
@@ -379,13 +400,19 @@ function ClassReport() {
     const [aiAnalysis, setAiAnalysis] = useState<AnalyzeClassReportOutput | null>(null);
     const { toast } = useToast();
 
+    const availableExams = useMemo(() => {
+        if (!selectedClass) return [];
+        const classExams = new Set(studentData.filter(s => s.class === selectedClass).map(s => s.exam_name));
+        return exams.filter(e => classExams.has(e));
+    }, [studentData, exams, selectedClass]);
+    
     const classDataForTable = useMemo(() => {
         if (!selectedClass || selectedExams.length === 0) return [];
          return studentData.filter(d => 
             d.class === selectedClass && 
-            (selectedExams.length === exams.length || selectedExams.includes(d.exam_name))
+            selectedExams.includes(d.exam_name)
         );
-    }, [studentData, selectedClass, selectedExams, exams]);
+    }, [studentData, selectedClass, selectedExams]);
 
     const handleGenerate = async () => {
         if (!selectedClass) {
@@ -401,7 +428,7 @@ function ClassReport() {
 
         const classData = studentData.filter(d => 
             d.class === selectedClass && 
-            (selectedExams.length === exams.length || selectedExams.includes(d.exam_name))
+            selectedExams.includes(d.exam_name)
         );
 
         if (classData.length === 0) {
@@ -420,13 +447,27 @@ function ClassReport() {
             toast({ title: "Sınıf Raporu başarıyla oluşturuldu." });
         } catch (error: any) {
             console.error("AI Class Analysis Error:", error);
-            toast({ title: "Sınıf raporu oluşturulurken bir hata oluştu.", description: error.message, variant: 'destructive' });
+            if (error.message?.includes('API key not found')) {
+                toast({
+                    title: "AI API Anahtarı Eksik",
+                    description: (
+                    <span>
+                        Lütfen AI özelliklerini kullanmak için Ayarlar sayfasından API anahtarınızı girin. 
+                        <Link href="/settings" className="underline font-semibold ml-1">Ayarlara Git</Link>
+                    </span>
+                    ),
+                    variant: "destructive",
+                    duration: 10000,
+                });
+            } else {
+                toast({ title: "Sınıf raporu oluşturulurken bir hata oluştu.", description: error.message, variant: 'destructive' });
+            }
         } finally {
             setIsGenerating(false);
         }
     }
 
-    const examNameForTitle = selectedExams.length === 0 ? "Deneme Seçilmedi" : selectedExams.length === exams.length ? 'Tüm Denemeler' : selectedExams.join(', ');
+    const examNameForTitle = selectedExams.length === 0 ? "Deneme Seçilmedi" : selectedExams.length === availableExams.length ? 'Tüm Denemeler' : selectedExams.join(', ');
 
     const handleClassChange = (c: string) => {
         setSelectedClass(c);
@@ -437,7 +478,7 @@ function ClassReport() {
         setAiAnalysis(null);
         setSelectedExams(prev => {
             if (exam === 'all') {
-                return prev.length === exams.length ? [] : exams.map(e => e);
+                return prev.length === availableExams.length ? [] : availableExams;
             }
              let newExams = prev.includes(exam) 
                 ? prev.filter(e => e !== exam)
@@ -478,12 +519,12 @@ function ClassReport() {
                                 <DropdownMenuLabel>Deneme Sınavları</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuCheckboxItem
-                                    checked={selectedExams.length === exams.length && exams.length > 0}
+                                    checked={selectedExams.length === availableExams.length && availableExams.length > 0}
                                     onCheckedChange={() => handleExamChange('all')}
                                 >
                                     Tüm Denemeler
                                 </DropdownMenuCheckboxItem>
-                                {exams.map(e => (
+                                {availableExams.map(e => (
                                     <DropdownMenuCheckboxItem
                                         key={e}
                                         checked={selectedExams.includes(e)}
@@ -648,13 +689,19 @@ function ParentReport() {
             .filter((s, i, arr) => arr.findIndex(t => t.student_no === s.student_no) === i)
             .sort((a, b) => a.student_name.localeCompare(b.student_name));
     }, [studentData, selectedClass]);
+    
+    const availableExams = useMemo(() => {
+        if (!selectedStudentNo) return [];
+        const studentExams = new Set(studentData.filter(s => s.student_no.toString() === selectedStudentNo).map(s => s.exam_name));
+        return exams.filter(e => studentExams.has(e));
+    }, [studentData, exams, selectedStudentNo]);
 
     const selectedStudentResults = useMemo(() => {
         if (!selectedStudentNo || selectedExams.length === 0) return [];
         return studentData
-            .filter(s => s.student_no.toString() === selectedStudentNo && (selectedExams.length === exams.length || selectedExams.includes(s.exam_name)))
+            .filter(s => s.student_no.toString() === selectedStudentNo && selectedExams.includes(s.exam_name))
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [studentData, selectedStudentNo, selectedExams, exams]);
+    }, [studentData, selectedStudentNo, selectedExams]);
 
     const handleGenerate = async () => {
         if (!selectedStudentNo || selectedStudentResults.length === 0) {
@@ -674,14 +721,28 @@ function ParentReport() {
             toast({ title: "Veli Raporu başarıyla oluşturuldu." });
         } catch (error: any) {
             console.error("AI Parent Analysis Error:", error);
-            toast({ title: "Veli raporu oluşturulurken bir hata oluştu.", description: error.message, variant: 'destructive' });
+            if (error.message?.includes('API key not found')) {
+                toast({
+                    title: "AI API Anahtarı Eksik",
+                    description: (
+                    <span>
+                        Lütfen AI özelliklerini kullanmak için Ayarlar sayfasından API anahtarınızı girin. 
+                        <Link href="/settings" className="underline font-semibold ml-1">Ayarlara Git</Link>
+                    </span>
+                    ),
+                    variant: "destructive",
+                    duration: 10000,
+                });
+            } else {
+                toast({ title: "Veli raporu oluşturulurken bir hata oluştu.", description: error.message, variant: 'destructive' });
+            }
         } finally {
             setIsGenerating(false);
         }
     }
 
     const selectedStudentName = studentsInClass.find(s => s.student_no.toString() === selectedStudentNo)?.student_name;
-    const examNameForTitle = selectedExams.length === 0 ? "Deneme Seçilmedi" : selectedExams.length === exams.length ? 'Tüm Denemeler' : selectedExams.join(', ');
+    const examNameForTitle = selectedExams.length === 0 ? "Deneme Seçilmedi" : selectedExams.length === availableExams.length ? 'Tüm Denemeler' : selectedExams.join(', ');
 
     const handleClassChange = (c: string) => {
         setSelectedClass(c);
@@ -698,7 +759,7 @@ function ParentReport() {
         setAiAnalysis(null);
         setSelectedExams(prev => {
             if (exam === 'all') {
-                return prev.length === exams.length ? [] : exams.map(e => e);
+                return prev.length === availableExams.length ? [] : availableExams;
             }
             const newExams = prev.includes(exam) 
                 ? prev.filter(e => e !== exam)
@@ -741,12 +802,12 @@ function ParentReport() {
                                 <DropdownMenuLabel>Deneme Sınavları</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuCheckboxItem
-                                    checked={selectedExams.length === exams.length && exams.length > 0}
+                                    checked={selectedExams.length === availableExams.length && availableExams.length > 0}
                                     onCheckedChange={() => handleExamChange('all')}
                                 >
                                     Tüm Denemeler
                                 </DropdownMenuCheckboxItem>
-                                {exams.map(e => (
+                                {availableExams.map(e => (
                                     <DropdownMenuCheckboxItem
                                         key={e}
                                         checked={selectedExams.includes(e)}

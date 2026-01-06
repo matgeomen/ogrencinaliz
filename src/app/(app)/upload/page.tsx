@@ -13,6 +13,7 @@ import { UploadCloud, File as FileIcon, X, Loader2, Download, AlertCircle, FileS
 import * as pdfjsLib from 'pdfjs-dist';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { processExamData } from '@/ai/flows/process-exam-data-flow';
+import Link from 'next/link';
 
 // Set worker source
 if (typeof window !== 'undefined') {
@@ -87,7 +88,21 @@ export default function UploadPage() {
 
       } catch (error: any) {
         console.error("File Processing Error:", error);
-        toast({ title: `Hata: ${file.name}`, description: error.message || 'Dosya işlenemedi.', variant: 'destructive' });
+        if (error.message?.includes('API key not found')) {
+            toast({
+                title: "AI API Anahtarı Eksik",
+                description: (
+                  <span>
+                    Lütfen AI özelliklerini kullanmak için Ayarlar sayfasından API anahtarınızı girin. 
+                    <Link href="/settings" className="underline font-semibold ml-1">Ayarlara Git</Link>
+                  </span>
+                ),
+                variant: "destructive",
+                duration: 10000,
+            });
+        } else {
+            toast({ title: `Hata: ${file.name}`, description: error.message || 'Dosya işlenemedi.', variant: 'destructive' });
+        }
         errorCount++;
       }
     }

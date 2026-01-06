@@ -11,6 +11,7 @@ import { Sun, KeyRound, Eye, EyeOff, Moon, Laptop, Settings as SettingsIcon, Spa
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Info } from "lucide-react";
+import Link from "next/link";
 
 export default function SettingsPage() {
     const { theme, setTheme } = useTheme();
@@ -74,7 +75,7 @@ export default function SettingsPage() {
                     <CardContent className="space-y-4">
                        <div className="flex items-center gap-2">
                            <div className="relative flex-grow">
-                                <Input id="api-key" type={showApiKey ? "text" : "password"} placeholder="API anahtarı..." />
+                                <Input id="api-key" type={showApiKey ? "text" : "password"} placeholder="API anahtarınızı buraya yapıştırın..." />
                                 <Button variant="ghost" size="icon" onClick={() => setShowApiKey(!showApiKey)} className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7">
                                     {showApiKey ? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}
                                 </Button>
@@ -83,12 +84,13 @@ export default function SettingsPage() {
                        </div>
                        <Alert variant="default" className="bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800">
                              <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                             <AlertTitle className="text-blue-800 dark:text-blue-300 font-semibold">Bilgi:</AlertTitle>
+                             <AlertTitle className="text-blue-800 dark:text-blue-300 font-semibold">API Anahtarı Nasıl Alınır?</AlertTitle>
                              <AlertDescription className="text-blue-700 dark:text-blue-300/80 text-sm">
-                                <ul className="list-disc list-inside space-y-1 mt-1">
-                                    <li>API anahtarı girilmezse sistem varsayılan anahtarı kullanır</li>
-                                    <li>Gemini API: PDF işleme ve AI analizi için</li>
-                                </ul>
+                                <ol className="list-decimal list-inside space-y-1 mt-1">
+                                    <li><Link href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="font-medium underline">Google AI Studio</Link> adresine gidin.</li>
+                                    <li>"Create API key" (API anahtarı oluştur) butonuna tıklayın.</li>
+                                    <li>Oluşturulan anahtarı kopyalayıp yukarıdaki alana yapıştırın ve kaydedin.</li>
+                                </ol>
                             </AlertDescription>
                         </Alert>
                     </CardContent>
@@ -105,7 +107,7 @@ export default function SettingsPage() {
                         </div>
                         <div className="flex justify-between items-center">
                             <span className="text-muted-foreground">AI Motoru</span>
-                            <span className="font-medium">Gemini 2.5 Flash</span>
+                            <span className="font-medium">Gemini 1.5 Flash (Latest)</span>
                         </div>
                         <div className="flex justify-between items-center">
                             <span className="text-muted-foreground">Veritabanı</span>

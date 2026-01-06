@@ -16,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { StudentExamResult } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 type AnalysisResult = AnalyzeStudentReportOutput | AnalyzeClassReportOutput | null;
 
@@ -42,12 +43,24 @@ export default function AiAnalysisPage() {
       .filter((s, i, arr) => arr.findIndex(t => t.student_no === s.student_no) === i)
       .sort((a, b) => a.student_name.localeCompare(b.student_name));
   }, [studentData, selectedClass]);
+  
+  const availableExams = useMemo(() => {
+    if (analysisType === 'student' && selectedStudentNo) {
+      const studentExams = new Set(studentData.filter(s => s.student_no.toString() === selectedStudentNo).map(s => s.exam_name));
+      return exams.filter(e => studentExams.has(e));
+    }
+    if (analysisType === 'class' && selectedClass) {
+      const classExams = new Set(studentData.filter(s => s.class === selectedClass).map(s => s.exam_name));
+      return exams.filter(e => classExams.has(e));
+    }
+    return exams;
+  }, [studentData, exams, analysisType, selectedClass, selectedStudentNo]);
 
   const examNameForTitle = useMemo(() => {
     if (selectedExams.length === 0) return "Deneme Seçilmedi";
-    if (selectedExams.length === exams.length) return 'Tüm Denemeler';
+    if (selectedExams.length === availableExams.length) return 'Tüm Denemeler';
     return selectedExams.join(', ');
-  }, [selectedExams, exams]);
+  }, [selectedExams, availableExams]);
   
   const selectedResults: StudentExamResult[] = useMemo(() => {
     if (selectedExams.length === 0 || !selectedClass) return [];
@@ -88,8 +101,7 @@ export default function AiAnalysisPage() {
     setAnalysisResult(null);
     setSelectedExams(prev => {
       if (exam === 'all') {
-        const allExamNames = exams.map(e => e);
-        return prev.length === allExamNames.length ? [] : allExamNames;
+        return prev.length === availableExams.length ? [] : availableExams;
       }
       return prev.includes(exam)
         ? prev.filter(e => e !== exam)
@@ -127,7 +139,21 @@ export default function AiAnalysisPage() {
       toast({ title: "AI Analizi başarıyla oluşturuldu." });
     } catch (error: any) {
       console.error("AI Analysis Error:", error);
-      toast({ title: "Analiz oluşturulurken bir hata oluştu.", description: error.message, variant: 'destructive' });
+      if (error.message?.includes('API key not found')) {
+         toast({
+            title: "AI API Anahtarı Eksik",
+            description: (
+              <span>
+                Lütfen AI özelliklerini kullanmak için Ayarlar sayfasından API anahtarınızı girin. 
+                <Link href="/settings" className="underline font-semibold ml-1">Ayarlara Git</Link>
+              </span>
+            ),
+            variant: "destructive",
+            duration: 10000,
+          });
+      } else {
+        toast({ title: "Analiz oluşturulurken bir hata oluştu.", description: error.message, variant: 'destructive' });
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -450,16 +476,16 @@ export default function AiAnalysisPage() {
                 <Label>Denemeler</Label>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="w-full justify-between" disabled={!selectedClass}>
+                        <Button variant="outline" className="w-full justify-between" disabled={!selectedClass || (analysisType === 'student' && !selectedStudentNo)}>
                             Deneme Seçin ({selectedExams.length}) <ChevronDown className="h-4 w-4 opacity-50" />
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-56">
                         <DropdownMenuLabel>Deneme Sınavları</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuCheckboxItem checked={selectedExams.length === exams.length} onCheckedChange={() => handleExamChange('all')}>Tüm Denemeler</DropdownMenuCheckboxItem>
+                        <DropdownMenuCheckboxItem checked={selectedExams.length === availableExams.length && availableExams.length > 0} onCheckedChange={() => handleExamChange('all')}>Tüm Denemeler</DropdownMenuCheckboxItem>
                         <DropdownMenuSeparator />
-                        {exams.map(e => (
+                        {availableExams.map(e => (
                             <DropdownMenuCheckboxItem key={e} checked={selectedExams.includes(e)} onCheckedChange={() => handleExamChange(e)}>{e}</DropdownMenuCheckboxItem>
                         ))}
                     </DropdownMenuContent>

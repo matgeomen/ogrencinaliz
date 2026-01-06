@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import * as pdfjsLib from 'pdfjs-dist/build/pdf';
+import Link from 'next/link';
 
 // Set worker source
 if (typeof window !== 'undefined') {
@@ -84,8 +85,22 @@ export default function EOkulPage() {
         setPdfAnalysis(result.analysis);
         toast({ title: 'E-Okul Analizi Tamamlandı', description: 'Yapay zeka analizi aşağıda gösterilmektedir.' });
 
-    } catch (error) {
-        toast({ title: `Hata: ${file.name}`, description: 'Dosya okunamadı veya analiz edilemedi.', variant: 'destructive' });
+    } catch (error: any) {
+        if (error.message?.includes('API key not found')) {
+            toast({
+                title: "AI API Anahtarı Eksik",
+                description: (
+                  <span>
+                    Lütfen AI özelliklerini kullanmak için Ayarlar sayfasından API anahtarınızı girin. 
+                    <Link href="/settings" className="underline font-semibold ml-1">Ayarlara Git</Link>
+                  </span>
+                ),
+                variant: "destructive",
+                duration: 10000,
+            });
+        } else {
+            toast({ title: `Hata: ${file.name}`, description: 'Dosya okunamadı veya analiz edilemedi.', variant: 'destructive' });
+        }
         console.error(error);
     } finally {
         setIsProcessing(false);

@@ -5,7 +5,7 @@ import { StudentExamResult, UserProfile } from '@/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useToast } from '@/hooks/use-toast';
 import { useCollection, useFirebase, useUser, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, doc, writeBatch, deleteDoc, query, where, getDocs, setDoc } from 'firebase/firestore';
+import { collection, doc, writeBatch, deleteDoc, query, where, getDocs, getCountFromServer } from 'firebase/firestore';
 import { WithId } from '@/firebase/firestore/use-collection';
 import { mockStudentData } from '@/lib/mock-data';
 
@@ -37,7 +37,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   
   const { toast } = useToast();
-  const { firestore, user, isUserLoading } = useUser();
+  const { firestore, isUserLoading } = useFirebase();
+  const { user } = useUser();
 
   const userProfileRef = useMemoFirebase(() => {
     return user && firestore ? doc(firestore, 'users', user.uid) : null;

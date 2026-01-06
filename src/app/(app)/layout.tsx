@@ -56,11 +56,8 @@ import {
   Shield,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FirebaseClientProvider, useUser, useDoc, useMemoFirebase } from '@/firebase';
+import { FirebaseClientProvider, useUser } from '@/firebase';
 import { getAuth, signOut } from 'firebase/auth';
-import { UserProfile } from '@/types';
-import { doc } from 'firebase/firestore';
-import { useFirebase } from '@/firebase/provider';
 
 
 const navItems = [
@@ -76,8 +73,7 @@ const navItems = [
 ];
 
 function AppHeader() {
-  const { exams, selectedExam, setSelectedExam, loading, profileAvatar } = useData();
-  const { user } = useUser();
+  const { exams, selectedExam, setSelectedExam, loading, profileAvatar, userProfile } = useData();
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
 
@@ -147,17 +143,17 @@ function AppHeader() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-10 w-10 rounded-full">
               <Avatar className="h-10 w-10">
-                 <AvatarImage src={user?.photoURL || profileAvatar} alt="User Avatar" />
-                <AvatarFallback>{user?.displayName?.substring(0, 2) || user?.email?.substring(0,2) || 'XX'}</AvatarFallback>
+                 <AvatarImage src={userProfile?.photoURL || profileAvatar} alt="User Avatar" />
+                <AvatarFallback>{userProfile?.displayName?.substring(0, 2) || userProfile?.email?.substring(0,2) || 'XX'}</AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56" align="end" forceMount>
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">{user?.displayName || 'Kullanıcı'}</p>
+                <p className="text-sm font-medium leading-none">{userProfile?.displayName || 'Kullanıcı'}</p>
                 <p className="text-xs leading-none text-muted-foreground">
-                  {user?.email}
+                  {userProfile?.email}
                 </p>
               </div>
             </DropdownMenuLabel>
@@ -183,17 +179,7 @@ function AppHeader() {
 function AppSidebar() {
   const pathname = usePathname();
   const { isMobile, setOpenMobile } = useSidebar();
-  const { user } = useUser();
-  const { firestore } = useFirebase();
-  
-  const userProfileRef = useMemoFirebase(() => {
-    if (firestore && user) {
-        return doc(firestore, 'users', user.uid);
-    }
-    return null;
-  }, [firestore, user]);
-
-  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+  const { userProfile } = useData();
 
   const isAdmin = userProfile?.role === 'admin';
 

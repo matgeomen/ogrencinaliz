@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -8,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Sun, KeyRound, Eye, EyeOff, Moon, Laptop, Settings as SettingsIcon } from "lucide-react";
+import { Sun, KeyRound, Eye, EyeOff, Moon, Laptop, Settings as SettingsIcon, Sparkles } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Info } from "lucide-react";
@@ -43,7 +42,7 @@ export default function SettingsPage() {
                          <RadioGroup
                             value={theme}
                             onValueChange={setTheme}
-                            className="grid max-w-md grid-cols-3 gap-8 pt-2"
+                            className="grid max-w-md grid-cols-2 md:grid-cols-4 gap-4 pt-2"
                         >
                             <Label className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
                                  <RadioGroupItem value="light" className="sr-only" />
@@ -59,6 +58,11 @@ export default function SettingsPage() {
                                 <RadioGroupItem value="system" className="sr-only" />
                                 <Laptop className="h-6 w-6" />
                                 <span className="mt-2">Sistem</span>
+                            </Label>
+                            <Label className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
+                                <RadioGroupItem value="premium" className="sr-only" />
+                                <Sparkles className="h-6 w-6" />
+                                <span className="mt-2">Premium</span>
                             </Label>
                         </RadioGroup>
                     </CardContent>

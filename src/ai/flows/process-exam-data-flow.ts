@@ -67,19 +67,20 @@ const prompt = ai.definePrompt({
   system: `Sen bir veri işleme uzmanısın. Görevin, sana verilen bir dosya içeriğini analiz ederek, içindeki öğrenci sınav sonuçlarını, ders ve konu (kazanım) detaylarıyla birlikte yapılandırılmış bir JSON formatına dönüştürmek.
 
 VERİ ANALİZ KURALLARI:
-1.  **Tüm Öğrencileri Bul:** Dosya içeriğindeki tüm öğrencilere ait satırları veya bölümleri bul. Her öğrenci için bir JSON nesnesi oluştur.
-2.  **Genel Bilgileri Eşleştir:** Metin veya JSON içindeki bilgileri, 'StudentExamResult' şemasındaki genel alanlarla ('exam_name', 'date', 'class', 'student_no', 'student_name', 'toplam_dogru', 'toplam_yanlis', 'toplam_net', 'toplam_puan') eşleştir. Sütun adları farklı olabilir (örn: 'Öğrenci Adı' yerine 'Ad Soyad'). Bu farklılıkları anla ve doğru alanlara ata.
-3.  **Ders ve Konu (Kazanım) Analizi:**
+1.  **Kısaltmaları Anla:** Metin içinde geçen 'D', 'd' doğru sayısını; 'Y', 'y' yanlış sayısını; 'B', 'b' boş sayısını; 'N', 'n' ise net sayısını ifade eder. Bu kısaltmaları doğru alanlara ata.
+2.  **Tüm Öğrencileri Bul:** Dosya içeriğindeki tüm öğrencilere ait satırları veya bölümleri bul. Her öğrenci için bir JSON nesnesi oluştur.
+3.  **Genel Bilgileri Eşleştir:** Metin veya JSON içindeki bilgileri, 'StudentExamResult' şemasındaki genel alanlarla ('exam_name', 'date', 'class', 'student_no', 'student_name', 'toplam_dogru', 'toplam_yanlis', 'toplam_net', 'toplam_puan') eşleştir. Sütun adları farklı olabilir (örn: 'Öğrenci Adı' yerine 'Ad Soyad'). Bu farklılıkları anla ve doğru alanlara ata.
+4.  **Ders ve Konu (Kazanım) Analizi:**
     *   Her bir ders (Türkçe, Matematik, Fen, Tarih, Din, İngilizce) için ayrı bir analiz yap.
     *   Eğer içerikte konu/kazanım detayı varsa (örn: "Üslü İfadeler: D", "Sözcükte Anlam: Y"), bu bilgiyi 'kazanimlar' dizisine ekle. Her bir konu için, öğrencinin cevabını 'D' (Doğru), 'Y' (Yanlış), veya 'B' (Boş) olarak 'sonuc' alanına kaydet.
     *   Eğer konu detayı yoksa, 'kazanimlar' dizisini boş bırak.
     *   Her ders için toplam doğru, yanlış ve net sayılarını ilgili ders nesnesindeki ('turkce', 'mat', vb.) 'dogru', 'yanlis', 'net' alanlarına ata. Eğer bu değerler yoksa, kazanım sonuçlarından hesaplamaya çalış.
-4.  **Eksik Verileri Yönet:**
+5.  **Eksik Verileri Yönet:**
     *   Eğer 'exam_name' (sınav adı) içerikte yoksa, bunu dosya adından ({{{fileName}}}) çıkarmaya çalış. Eğer yine bulamazsan, 'Bilinmeyen Sınav' olarak ayarla.
     *   Eğer 'date' (tarih) içerikte yoksa, bugünün tarihini (YYYY-AA-GG formatında) kullan.
     *   Eğer bir ders hiç yoksa (örn: bazı sınavlarda Din Kültürü olmayabilir), o ders için 'dogru', 'yanlis', 'net' değerlerini 0 yap ve 'kazanimlar' dizisini boş bırak.
-5.  **Veri Tipi Dönüşümü:** Tüm sayısal alanların number tipinde olduğundan emin ol. Virgüllü sayıları noktaya dönüştür.
-6.  **Çıktı Formatı:** Sonuçları, 'results' adında bir anahtarın içinde bir JSON dizisi olarak döndür. Her dizi elemanı, bir öğrencinin sınav sonucunu temsil eden ve 'StudentExamResult' şemasına uyan bir nesne olmalıdır.
+6.  **Veri Tipi Dönüşümü:** Tüm sayısal alanların number tipinde olduğundan emin ol. Virgüllü sayıları noktaya dönüştür.
+7.  **Çıktı Formatı:** Sonuçları, 'results' adında bir anahtarın içinde bir JSON dizisi olarak döndür. Her dizi elemanı, bir öğrencinin sınav sonucunu temsil eden ve 'StudentExamResult' şemasına uyan bir nesne olmalıdır.
 `,
   prompt: `ANALİZ EDİLECEK DOSYA BİLGİLERİ:
 - Dosya Adı: {{{fileName}}}
@@ -102,8 +103,14 @@ const processExamDataFlow = ai.defineFlow(
     if (input.fileContent.length > MAX_LENGTH) {
         input.fileContent = input.fileContent.substring(0, MAX_LENGTH);
     }
+
+    const key = process.env.GEMINI_API_KEY;
+    if (!key) throw new Error("GEMINI_API_KEY env bulunamadı");
+    if (key.includes("YOUR_") || key.length < 20) throw new Error("GEMINI_API_KEY geçersiz görünüyor");
     
     const {output} = await prompt(input);
     return output!;
   }
 );
+
+    

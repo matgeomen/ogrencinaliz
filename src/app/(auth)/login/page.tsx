@@ -98,8 +98,9 @@ export default function LoginPage() {
       await setDoc(userRef, {
         uid: user.uid,
         email: user.email,
-        role: data.email === 'admin@lgsradar.com' ? 'admin' : 'user', // Assign admin role
+        role: 'user', // Default role
         createdAt: serverTimestamp(),
+        storagePreference: 'local',
       });
       
       toast({ title: 'Kayıt başarılı!', description: 'Giriş yapabilirsiniz.' });

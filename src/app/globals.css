@@ -91,43 +91,43 @@ body {
 }
 
 .premium {
-  --background: 225 30% 9%;
-  --foreground: 210 40% 98%;
+  --background: 210 40% 98%;
+  --foreground: 222 47% 11%;
+  
+  --card: 210 40% 100%;
+  --card-foreground: 222 47% 11%;
 
-  --card: 222 50% 12%;
-  --card-foreground: 210 40% 98%;
+  --popover: 210 40% 100%;
+  --popover-foreground: 222 47% 11%;
 
-  --popover: 225 30% 6%;
-  --popover-foreground: 210 40% 98%;
-
-  --primary: 217 91% 65%;
+  --primary: 217 91% 60%;
   --primary-foreground: 210 40% 98%;
 
-  --secondary: 225 25% 15%;
-  --secondary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222 47% 11%;
 
-  --muted: 225 25% 15%;
-  --muted-foreground: 215 20% 65%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
 
-  --accent: 217 33% 22%;
-  --accent-foreground: 210 40% 98%;
+  --accent: 210 40% 94.1%;
+  --accent-foreground: 222 47% 11%;
 
-  --destructive: 0 63% 40%;
+  --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 210 40% 98%;
 
-  --border: 217 33% 25%;
-  --input: 225 25% 15%;
-  --ring: 217 91% 65%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 217 91% 60%;
   
   --radius: 0.75rem;
 
-  --sidebar-background: 225 25% 11%;
-  --sidebar-foreground: 210 40% 98%;
-  --sidebar-border: 217 33% 20%;
+  --sidebar-background: 210 40% 99%;
+  --sidebar-foreground: 222 47% 11%;
+  --sidebar-border: 214.3 31.8% 91.4%;
 }
 
 .premium body {
-    background: linear-gradient(-45deg, hsl(225, 30%, 9%), hsl(240, 20%, 7%), hsl(260, 30%, 10%), hsl(225, 30%, 9%));
+    background: linear-gradient(-45deg, hsl(210, 80%, 98%), hsl(220, 80%, 97%), hsl(200, 80%, 99%), hsl(210, 80%, 98%));
     background-size: 400% 400%;
     animation: premium-gradient 15s ease infinite;
 }
@@ -136,11 +136,11 @@ body {
 .premium [class*="bg-card"], 
 .premium .bg-popover, 
 .premium .bg-secondary {
-    background-color: hsla(var(--card), 0.7);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    background-color: hsla(0, 0%, 100%, 0.7);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    border: 1px solid hsla(var(--border), 0.2);
+    border: 1px solid hsla(0, 0%, 100%, 0.18);
 }
 
 .premium button.bg-primary {

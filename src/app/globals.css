@@ -88,48 +88,6 @@ body {
     --sidebar-border: 217 33% 17%;
     --sidebar-ring: 217 91% 60%;
   }
-   .premium {
-    --background: 220 20% 98%;
-    --foreground: 220 15% 20%;
-    --card: 220 20% 100%;
-    --card-foreground: 220 15% 20%;
-    --popover: 220 20% 100%;
-    --popover-foreground: 220 15% 20%;
-    --primary: 260 85% 65%; /* Vibrant purple */
-    --primary-foreground: 0 0% 100%;
-    --secondary: 220 15% 96%;
-    --secondary-foreground: 220 15% 20%;
-    --muted: 220 15% 95%;
-    --muted-foreground: 220 10% 45%;
-    --accent: 330 80% 95%; /* Soft pink accent */
-    --accent-foreground: 330 80% 30%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 220 15% 90%;
-    --input: 220 15% 90%;
-    --ring: 260 85% 65%;
-    --radius: 0.75rem; /* More rounded corners */
-  }
-
-  .premium body {
-    background-size: 200% 200%;
-    background-image: linear-gradient(-45deg, hsl(220, 20%, 92%), hsl(220, 20%, 98%), hsl(260, 80%, 97%));
-    animation: premium-gradient 15s ease infinite;
-  }
-  
-  .premium [data-sidebar="sidebar"],
-  .premium .bg-card,
-  .premium .bg-popover {
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.07), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  }
-
-  .premium .border {
-      border-color: hsl(var(--border) / 0.7);
-  }
-
-  .premium button.bg-primary:hover {
-    box-shadow: 0 4px 14px 0 hsl(var(--primary) / 30%);
-  }
 }
 
 

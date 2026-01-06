@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -14,8 +13,9 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { StudentExamResult } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { User } from 'lucide-react';
+import { User, ArrowUpDown } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
 
 const LESSON_COLORS = {
   'Türkçe': '#8884d8',
@@ -128,21 +128,73 @@ const getStatus = (score: number): { label: string, variant: "default" | "second
     return { label: 'Zayıf', variant: 'destructive' };
 };
 
+type SortKey = keyof StudentExamResult | 'student_no' | 'student_name' | 'class' | 'toplam_puan';
+
+const sortableColumns: { key: SortKey, label: string }[] = [
+  { key: 'student_no', label: 'No' },
+  { key: 'student_name', label: 'Adı Soyadı' },
+  { key: 'class', label: 'Sınıf' },
+  { key: 'toplam_puan', label: 'Puan' },
+];
 
 export default function StudentsPage() {
   const { studentData, selectedExam, classes, loading } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [classFilter, setClassFilter] = useState('all');
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'ascending' | 'descending' }>({ key: 'toplam_puan', direction: 'descending' });
 
   const filteredData = useMemo(() => {
-    return studentData
+    let data = studentData
       .filter(d => d.exam_name === selectedExam)
       .filter(d => classFilter === 'all' || d.class === classFilter)
       .filter(d => 
         d.student_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         d.student_no.toString().includes(searchTerm)
       );
-  }, [studentData, selectedExam, classFilter, searchTerm]);
+
+    if (sortConfig.key) {
+        data.sort((a, b) => {
+            let aValue, bValue;
+            
+            if (sortConfig.key === 'student_name' || sortConfig.key === 'class') {
+                 aValue = a[sortConfig.key] as string;
+                 bValue = b[sortConfig.key] as string;
+                 return sortConfig.direction === 'ascending' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+            } else {
+                aValue = a[sortConfig.key as 'student_no' | 'toplam_puan'] as number;
+                bValue = b[sortConfig.key as 'student_no' | 'toplam_puan'] as number;
+                return sortConfig.direction === 'ascending' ? aValue - bValue : bValue - aValue;
+            }
+        });
+    }
+
+    return data;
+  }, [studentData, selectedExam, classFilter, searchTerm, sortConfig]);
+
+  const requestSort = (key: SortKey) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+  
+  const renderSortableHeader = (column: { key: SortKey, label: string }) => (
+    <TableHead 
+        key={column.key}
+        className={cn(
+            column.key === 'toplam_puan' && 'text-right',
+            column.key === 'student_name' && 'w-full',
+            column.key === 'student_no' && 'w-[80px]',
+            column.key === 'class' && 'hidden md:table-cell'
+        )}
+    >
+        <Button variant="ghost" onClick={() => requestSort(column.key)} className="px-2 whitespace-nowrap">
+            {column.label}
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+    </TableHead>
+  );
 
   return (
     <div className="space-y-6">
@@ -171,10 +223,7 @@ export default function StudentsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[80px]">No</TableHead>
-                  <TableHead>Adı Soyadı</TableHead>
-                  <TableHead className="hidden md:table-cell">Sınıf</TableHead>
-                  <TableHead className="text-right">Puan</TableHead>
+                  {sortableColumns.map(col => renderSortableHeader(col))}
                   <TableHead className="text-center hidden sm:table-cell">Durum</TableHead>
                 </TableRow>
               </TableHeader>

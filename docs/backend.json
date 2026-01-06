@@ -56,12 +56,15 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "UserProfile",
       "type": "object",
-      "description": "Represents a user's profile information.",
+      "description": "Represents a user's profile information and preferences.",
       "properties": {
         "uid": { "type": "string", "description": "The user's unique ID." },
         "email": { "type": "string", "format": "email", "description": "The user's email address." },
+        "displayName": { "type": "string", "description": "The user's display name." },
+        "photoURL": { "type": "string", "format": "uri", "description": "URL of the user's profile picture." },
         "role": { "type": "string", "enum": ["admin", "user"], "description": "The user's role." },
-        "createdAt": { "type": "string", "format": "date-time", "description": "The timestamp of when the user was created." }
+        "createdAt": { "type": "string", "format": "date-time", "description": "The timestamp of when the user was created." },
+        "storagePreference": { "type": "string", "enum": ["local", "cloud", "both"], "description": "User's data storage preference." }
       },
       "required": ["uid", "email", "role", "createdAt"]
     }

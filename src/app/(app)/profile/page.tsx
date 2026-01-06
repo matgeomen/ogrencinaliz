@@ -16,28 +16,26 @@ import { firebaseConfig as initialFirebaseConfig } from "@/firebase/config"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useFirebase } from "@/firebase"
 import { cn } from "@/lib/utils"
+import { updateProfile } from "firebase/auth"
+import { doc, setDoc } from "firebase/firestore"
 
 type StoragePreference = 'local' | 'cloud' | 'both';
 
 export default function ProfilePage() {
-  const { profileAvatar, setProfileAvatar, storagePreference, setStoragePreference } = useData();
-  const { auth, user, isUserLoading } = useFirebase();
+  const { profileAvatar, setProfileAvatar, storagePreference, setStoragePreference, userProfile } = useData();
+  const { auth, user, isUserLoading, firestore } = useFirebase();
   const { toast } = useToast();
 
-  const [firebaseConfig, setFirebaseConfig] = useState(initialFirebaseConfig);
-  const [isAuthLoading, setIsAuthLoading] = useState(false);
-  const [isSheetIdSaving, setIsSheetIdSaving] = useState(false);
-  const [sheetId, setSheetId] = useState('');
+  const [displayName, setDisplayName] = useState('');
 
   useEffect(() => {
-    const fetchSheetId = async () => {
-      // In a real app you might fetch this from a user profile service
-      const savedSheetId = localStorage.getItem('googleSheetId') || '';
-      setSheetId(savedSheetId);
-    };
-    fetchSheetId();
-  }, []);
-  
+    if (user) {
+        setDisplayName(user.displayName || '');
+    }
+    if (userProfile) {
+        setDisplayName(userProfile.displayName || user?.displayName || '');
+    }
+  }, [user, userProfile]);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -53,10 +51,10 @@ export default function ProfilePage() {
       const reader = new FileReader();
       reader.onload = (e) => {
         const result = e.target?.result as string;
-        setProfileAvatar(result);
+        setProfileAvatar(result); // This will handle both local and cloud saving via context
         toast({
           title: "Profil Resmi Güncellendi",
-          description: "Yeni profil resminiz başarıyla yüklendi ve kaydedildi.",
+          description: "Yeni profil resminiz başarıyla kaydedildi.",
         });
       };
       reader.readAsDataURL(file);
@@ -69,47 +67,45 @@ export default function ProfilePage() {
     multiple: false,
   });
 
-  const handleConfigChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFirebaseConfig(prev => ({...prev, [e.target.id]: e.target.value}));
-  }
-  
-  const handleSavePreferences = () => {
-    setStoragePreference(storagePreference);
-    
-    // In a real app, this would trigger a backend process to update `src/firebase/config.ts`
-    // For this prototype, we are simulating this by logging
-    console.log("Saving new Firebase config (simulation):", firebaseConfig);
-
-    toast({
-        title: "Ayarlar Kaydedildi",
-        description: `Veri depolama tercihiniz güncellendi.`,
-    });
-  }
-
-  const handleGoogleAuth = async () => {
-    setIsAuthLoading(true);
-    try {
-        const res = await fetch('/api/auth/google');
-        const { url } = await res.json();
-        window.location.href = url;
-    } catch (error) {
-        console.error("Google Auth Error:", error);
-        toast({ title: "Google ile bağlanırken hata oluştu.", variant: 'destructive' });
-        setIsAuthLoading(false);
+  const handleSavePreferences = async () => {
+    if (!user || !firestore) {
+        toast({ title: "Kullanıcı bulunamadı", description: "Ayarları kaydetmek için giriş yapmalısınız.", variant: "destructive" });
+        return;
     }
-  };
 
-  const handleSaveSheetId = async () => {
-    setIsSheetIdSaving(true);
-    // In a real app, you would securely save this to the user's profile in your database.
-    // For this prototype, we'll use localStorage.
-    localStorage.setItem('googleSheetId', sheetId);
-    toast({ title: "Google E-Tablo ID'si kaydedildi." });
-    
-    // You would also want to update your .env file on the server. This is a client-side simulation.
-    console.log(`Simulating update of .env with GOOGLE_SHEET_ID=${sheetId}`);
-    
-    setIsSheetIdSaving(false);
+    try {
+        // 1. Update local storage via context
+        setStoragePreference(storagePreference);
+        setProfileAvatar(profileAvatar); // Redundant if already set, but ensures consistency
+        localStorage.setItem('displayName', displayName); // Keep a local copy
+
+        // 2. Update Firebase Auth Profile
+        await updateProfile(user, {
+            displayName: displayName,
+            photoURL: profileAvatar,
+        });
+
+        // 3. Update Firestore Document
+        const userDocRef = doc(firestore, "users", user.uid);
+        await setDoc(userDocRef, {
+            displayName: displayName,
+            photoURL: profileAvatar,
+            storagePreference: storagePreference,
+        }, { merge: true });
+
+        toast({
+            title: "Profil ve Ayarlar Kaydedildi",
+            description: `Bilgileriniz hem yerel olarak hem de bulutta güncellendi.`,
+        });
+
+    } catch (error: any) {
+        console.error("Profile save error:", error);
+        toast({
+            title: "Hata",
+            description: "Profil kaydedilirken bir hata oluştu: " + error.message,
+            variant: "destructive",
+        });
+    }
   }
 
   const canConnectToFirebase = auth && user && !isUserLoading;
@@ -129,8 +125,8 @@ export default function ProfilePage() {
               <div className="flex flex-col items-center gap-2 text-center">
                   <div {...getRootProps()} className="relative cursor-pointer group">
                       <Avatar className="h-36 w-36">
-                          <AvatarImage src={user?.photoURL || profileAvatar} alt="Profile Avatar"/>
-                          <AvatarFallback>{user?.displayName?.substring(0, 2) || user?.email?.substring(0,2) || 'XX'}</AvatarFallback>
+                          <AvatarImage src={profileAvatar || user?.photoURL} alt="Profile Avatar"/>
+                          <AvatarFallback>{displayName?.substring(0, 2) || user?.email?.substring(0,2) || 'XX'}</AvatarFallback>
                       </Avatar>
                       <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                           <UploadCloud className="h-8 w-8 text-white"/>
@@ -143,7 +139,7 @@ export default function ProfilePage() {
               <div className="space-y-4">
                   <div className="space-y-2">
                       <Label htmlFor="name">Ad Soyad</Label>
-                      <Input id="name" defaultValue={user?.displayName || ''} />
+                      <Input id="name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
                   </div>
                   <div className="space-y-2">
                       <Label htmlFor="email">E-posta</Label>
@@ -186,11 +182,10 @@ export default function ProfilePage() {
 
                 {(storagePreference === 'cloud' || storagePreference === 'both') && (
                     <Card className="bg-secondary/50">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-base"><CloudCog className="h-5 w-5 text-blue-600"/> Firebase & Sheets Yapılandırması</CardTitle>
-                            <CardDescription>Bulut depolamayı aktif etmek için Firebase proje bilgilerinizi girin ve Google Sheets'e erişim izni verin.</CardDescription>
+                         <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-base"><CloudCog className="h-5 w-5 text-blue-600"/> Firebase Yapılandırması</CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4">
+                        <CardContent>
                              <Alert variant={canConnectToFirebase ? "default" : "destructive"} className={cn(
                                 canConnectToFirebase 
                                 ? "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800"
@@ -201,35 +196,9 @@ export default function ProfilePage() {
                                     {canConnectToFirebase ? "Firebase Bağlantısı Aktif" : "Firebase Bağlantısı Kurulamadı"}
                                 </AlertTitle>
                                 <AlertDescription className={cn("text-sm", canConnectToFirebase ? "text-green-700 dark:text-green-300/80" : "text-red-700 dark:text-red-300/80")}>
-                                    {canConnectToFirebase ? "Uygulama başarıyla Firebase projenize bağlandı." : "Lütfen aşağıdaki yapılandırma bilgilerini kontrol edin veya yeni bir proje oluşturun."}
+                                    {canConnectToFirebase ? "Uygulama başarıyla Firebase projenize bağlandı." : "Firebase'e bağlanılamadı. Lütfen internet bağlantınızı ve ayarlarınızı kontrol edin."}
                                 </AlertDescription>
                             </Alert>
-                             <div className="space-y-2">
-                                <Label htmlFor="projectId">Firebase Proje ID</Label>
-                                <Input id="projectId" value={firebaseConfig.projectId} onChange={handleConfigChange} placeholder="my-awesome-project-12345" />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="apiKey">Firebase API Anahtarı</Label>
-                                <Input id="apiKey" type="password" value={firebaseConfig.apiKey} onChange={handleConfigChange} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="authDomain">Firebase Auth Domain</Label>
-                                <Input id="authDomain" value={firebaseConfig.authDomain} onChange={handleConfigChange} placeholder="my-project.firebaseapp.com" />
-                            </div>
-                             <div className="space-y-2">
-                                <Label htmlFor="sheetId">Google Sheet ID</Label>
-                                <Input id="sheetId" value={sheetId} onChange={(e) => setSheetId(e.target.value)} placeholder="Google E-Tablo Kimliği" />
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                                <Button onClick={handleGoogleAuth} disabled={isAuthLoading}>
-                                  {isAuthLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                                  Google Sheets İzni Ver
-                                </Button>
-                                <Button onClick={handleSaveSheetId} disabled={isSheetIdSaving}>
-                                  {isSheetIdSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                                  E-Tablo ID'sini Kaydet
-                                </Button>
-                            </div>
                         </CardContent>
                     </Card>
                 )}
@@ -239,7 +208,7 @@ export default function ProfilePage() {
         <div className="flex justify-end">
             <Button onClick={handleSavePreferences}>
                 <Save className="mr-2 h-4 w-4"/>
-                Tercihleri Kaydet
+                Profili ve Tercihleri Kaydet
             </Button>
         </div>
       </div>

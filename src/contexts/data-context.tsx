@@ -1,11 +1,11 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { StudentExamResult } from '@/types';
+import { StudentExamResult, UserProfile } from '@/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useToast } from '@/hooks/use-toast';
-import { useCollection, useFirebase, useUser, useMemoFirebase } from '@/firebase';
-import { collection, doc, writeBatch, deleteDoc, query, where, getDocs } from 'firebase/firestore';
+import { useCollection, useFirebase, useUser, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, doc, writeBatch, deleteDoc, query, where, getDocs, setDoc } from 'firebase/firestore';
 import { WithId } from '@/firebase/firestore/use-collection';
 import { mockStudentData } from '@/lib/mock-data';
 
@@ -24,6 +24,7 @@ interface DataContextType {
   setProfileAvatar: (url: string) => void;
   storagePreference: StoragePreference;
   setStoragePreference: (pref: StoragePreference) => void;
+  userProfile: UserProfile | null;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -38,13 +39,26 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const { firestore } = useFirebase();
   const { user, isUserLoading } = useUser();
 
+  const userProfileRef = useMemoFirebase(() => {
+    return user && firestore ? doc(firestore, 'users', user.uid) : null;
+  }, [user, firestore]);
+
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+
   useEffect(() => {
-    // Only run on client
-    const savedPref = localStorage.getItem('storagePreference') as StoragePreference;
-    if (savedPref) {
-      setStoragePreferenceState(savedPref);
+    if (isUserLoading || isProfileLoading) return;
+
+    // Prioritize cloud data, then local, then default
+    const pref = userProfile?.storagePreference || localStorage.getItem('storagePreference') as StoragePreference || 'local';
+    setStoragePreferenceState(pref);
+    localStorage.setItem('storagePreference', pref);
+    
+    const avatar = userProfile?.photoURL || localStorage.getItem('profileAvatar');
+    if (avatar) {
+      setProfileAvatarState(avatar);
     } else {
-      localStorage.setItem('storagePreference', 'local');
+       const defaultAvatar = PlaceHolderImages.find(img => img.id === 'user-avatar');
+       if (defaultAvatar) setProfileAvatarState(defaultAvatar.imageUrl);
     }
 
     const savedData = localStorage.getItem('studentData');
@@ -55,24 +69,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setLocalData(initialData);
       localStorage.setItem('studentData', JSON.stringify(initialData));
     }
+  }, [userProfile, isUserLoading, isProfileLoading]);
 
-    const storedAvatar = localStorage.getItem('profileAvatar');
-    if (storedAvatar) {
-      setProfileAvatarState(storedAvatar);
-    } else {
-      const defaultAvatar = PlaceHolderImages.find(img => img.id === 'user-avatar');
-      if (defaultAvatar) setProfileAvatarState(defaultAvatar.imageUrl);
-    }
-  }, []);
 
   const setStoragePreference = (pref: StoragePreference) => {
     setStoragePreferenceState(pref);
     localStorage.setItem('storagePreference', pref);
+    if(user && firestore) {
+      setDoc(doc(firestore, 'users', user.uid), { storagePreference: pref }, { merge: true });
+    }
   };
   
   const resultsCollection = useMemoFirebase(() => {
     if ((storagePreference === 'cloud' || storagePreference === 'both') && firestore && user) {
-      // Point to a user-specific subcollection
       return collection(firestore, 'users', user.uid, 'results');
     }
     return null;
@@ -104,7 +113,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     return [];
   }, [localData, cloudData, storagePreference]);
 
-  const loading = isFirestoreLoading || isUserLoading;
+  const loading = isFirestoreLoading || isUserLoading || isProfileLoading;
 
   const exams = useMemo(() => Array.from(new Set(studentData.map(d => d.exam_name))).sort(), [studentData]);
   const classes = useMemo(() => Array.from(new Set(studentData.map(d => d.class))).sort(), [studentData]);
@@ -120,6 +129,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const setProfileAvatar = (url: string) => {
     setProfileAvatarState(url);
     localStorage.setItem('profileAvatar', url);
+     if(user && firestore) {
+      setDoc(doc(firestore, 'users', user.uid), { photoURL: url }, { merge: true });
+    }
   }
 
   const addStudentData = useCallback(async (newData: StudentExamResult[]) => {
@@ -145,10 +157,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if ((storagePreference === 'cloud' || storagePreference === 'both') && firestore && user) {
         const batch = writeBatch(firestore);
         dataWithIds.forEach(item => {
-            // Use a consistent and valid ID format
             const docId = item.id.replace(/[\/.]/g, '-');
             const newDocRef = doc(firestore, 'users', user.uid, 'results', docId);
-            // Use merge:true to create or update the document.
             batch.set(newDocRef, item, { merge: true });
         });
 
@@ -205,6 +215,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setProfileAvatar,
     storagePreference,
     setStoragePreference,
+    userProfile,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

@@ -24,6 +24,8 @@ interface DataContextType {
   setProfileAvatar: (url: string) => void;
   storagePreference: StoragePreference;
   setStoragePreference: (pref: StoragePreference) => void;
+  apiKey: string | null;
+  setApiKey: (key: string) => void;
   userProfile: UserProfile | null;
 }
 
@@ -34,6 +36,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [storagePreference, setStoragePreferenceState] = useState<StoragePreference>('local');
   const [selectedExam, setSelectedExam] = useState<string>('');
   const [profileAvatar, setProfileAvatarState] = useState<string>('');
+  const [apiKey, setApiKeyState] = useState<string | null>(null);
   const { toast } = useToast();
   
   const { firestore } = useFirebase();
@@ -60,6 +63,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
        const defaultAvatar = PlaceHolderImages.find(img => img.id === 'user-avatar');
        if (defaultAvatar) setProfileAvatarState(defaultAvatar.imageUrl);
     }
+    
+    const key = userProfile?.apiKey || localStorage.getItem('gemini_api_key');
+    if (key) {
+      setApiKeyState(key);
+    }
+    // Set Gemini API key for Genkit
+    if (typeof window !== 'undefined' && key) {
+        process.env.GEMINI_API_KEY = key;
+    }
+
 
     const savedData = localStorage.getItem('studentData');
     if (savedData) {
@@ -80,6 +93,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   };
   
+  const setApiKey = (key: string) => {
+    setApiKeyState(key);
+    localStorage.setItem('gemini_api_key', key);
+    if (typeof window !== 'undefined') {
+        process.env.GEMINI_API_KEY = key;
+    }
+  }
+
   const resultsCollection = useMemoFirebase(() => {
     if ((storagePreference === 'cloud' || storagePreference === 'both') && firestore && user) {
       return collection(firestore, 'users', user.uid, 'results');
@@ -215,6 +236,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setProfileAvatar,
     storagePreference,
     setStoragePreference,
+    apiKey,
+    setApiKey,
     userProfile,
   };
 

@@ -7,21 +7,63 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Sun, KeyRound, Eye, EyeOff, Moon, Laptop, Settings as SettingsIcon, Sparkles } from "lucide-react";
+import { Sun, KeyRound, Eye, EyeOff, Moon, Laptop, Settings as SettingsIcon, Sparkles, Save } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Info } from "lucide-react";
 import Link from "next/link";
+import { useData } from "@/contexts/data-context";
+import { useToast } from "@/hooks/use-toast";
+import { useFirebase } from "@/firebase";
+import { doc, setDoc } from "firebase/firestore";
 
 export default function SettingsPage() {
     const { theme, setTheme } = useTheme();
+    const { apiKey, setApiKey } = useData();
+    const { user, firestore } = useFirebase();
+    const { toast } = useToast();
 
+    const [currentApiKey, setCurrentApiKey] = useState(apiKey || '');
     const [showApiKey, setShowApiKey] = useState(false);
     const [mounted, setMounted] = useState(false);
     
     useEffect(() => {
         setMounted(true);
-    }, []);
+        if (apiKey) {
+            setCurrentApiKey(apiKey);
+        }
+    }, [apiKey]);
+    
+    const handleSaveApiKey = async () => {
+        if (!user || !firestore) {
+            toast({ title: "Kullanıcı bulunamadı", description: "Ayarları kaydetmek için giriş yapmalısınız.", variant: "destructive" });
+            return;
+        }
+
+        try {
+            // Update context and local storage
+            setApiKey(currentApiKey);
+
+            // Update Firestore
+            const userDocRef = doc(firestore, "users", user.uid);
+            await setDoc(userDocRef, {
+                apiKey: currentApiKey,
+            }, { merge: true });
+
+            toast({
+                title: "API Anahtarı Kaydedildi",
+                description: `API anahtarınız hem yerel olarak hem de bulutta güncellendi.`,
+            });
+        } catch (error: any) {
+            console.error("API Key save error:", error);
+            toast({
+                title: "Hata",
+                description: "API Anahtarı kaydedilirken bir hata oluştu: " + error.message,
+                variant: "destructive",
+            });
+        }
+    }
+
 
     if (!mounted) {
         return null;
@@ -75,12 +117,15 @@ export default function SettingsPage() {
                     <CardContent className="space-y-4">
                        <div className="flex items-center gap-2">
                            <div className="relative flex-grow">
-                                <Input id="api-key" type={showApiKey ? "text" : "password"} placeholder="API anahtarınızı buraya yapıştırın..." />
+                                <Input id="api-key" type={showApiKey ? "text" : "password"} placeholder="API anahtarınızı buraya yapıştırın..." value={currentApiKey} onChange={(e) => setCurrentApiKey(e.target.value)} />
                                 <Button variant="ghost" size="icon" onClick={() => setShowApiKey(!showApiKey)} className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7">
                                     {showApiKey ? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}
                                 </Button>
                             </div>
-                            <Button>Kaydet</Button>
+                            <Button onClick={handleSaveApiKey}>
+                                <Save className="mr-2 h-4 w-4" />
+                                Kaydet
+                            </Button>
                        </div>
                        <Alert variant="default" className="bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800">
                              <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />

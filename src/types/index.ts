@@ -46,4 +46,5 @@ export interface UserProfile {
     role: 'admin' | 'user';
     createdAt: any; // Firestore ServerTimestamp
     storagePreference?: 'local' | 'cloud' | 'both';
+    apiKey?: string;
 }

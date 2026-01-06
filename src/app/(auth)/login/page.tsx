@@ -185,7 +185,7 @@ export default function LoginPage() {
                 <CardHeader>
                     <CardTitle>Yeni Hesap Oluştur</CardTitle>
                     <CardDescription>Başlamak için bir hesap oluşturun.</CardDescription>
-                </Header>
+                </CardHeader>
                 <CardContent>
                     <Form {...registerForm}>
                         <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">

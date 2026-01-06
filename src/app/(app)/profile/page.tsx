@@ -12,7 +12,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useData } from "@/contexts/data-context"
 import { useToast } from "@/hooks/use-toast"
-import { firebaseConfig as initialFirebaseConfig } from "@/firebase/config"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useFirebase } from "@/firebase"
 import { cn } from "@/lib/utils"
@@ -76,16 +75,14 @@ export default function ProfilePage() {
     try {
         // 1. Update local storage via context
         setStoragePreference(storagePreference);
-        setProfileAvatar(profileAvatar); // Redundant if already set, but ensures consistency
-        localStorage.setItem('displayName', displayName); // Keep a local copy
+        localStorage.setItem('displayName', displayName);
 
-        // 2. Update Firebase Auth Profile
+        // 2. Update Firebase Auth Profile (only for display name)
         await updateProfile(user, {
             displayName: displayName,
-            photoURL: profileAvatar,
         });
 
-        // 3. Update Firestore Document
+        // 3. Update Firestore Document with all data, including photoURL
         const userDocRef = doc(firestore, "users", user.uid);
         await setDoc(userDocRef, {
             displayName: displayName,

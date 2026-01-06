@@ -86,12 +86,14 @@ export default function EOkulPage() {
         toast({ title: 'E-Okul Analizi Tamamlandı', description: 'Yapay zeka analizi aşağıda gösterilmektedir.' });
 
     } catch (error: any) {
-        if (error.message?.includes('API key not found')) {
+        console.error("E-Okul Analysis Error:", error);
+        const errorMessage = error.message?.toLowerCase() || '';
+        if (errorMessage.includes('api key not found') || errorMessage.includes('api key expired')) {
             toast({
-                title: "AI API Anahtarı Eksik",
+                title: "AI API Anahtarı Geçersiz veya Süresi Dolmuş",
                 description: (
                   <span>
-                    Lütfen AI özelliklerini kullanmak için Ayarlar sayfasından API anahtarınızı girin. 
+                    Lütfen AI özelliklerini kullanmak için Ayarlar sayfasından API anahtarınızı yenileyin veya girin. 
                     <Link href="/settings" className="underline font-semibold ml-1">Ayarlara Git</Link>
                   </span>
                 ),
@@ -101,7 +103,6 @@ export default function EOkulPage() {
         } else {
             toast({ title: `Hata: ${file.name}`, description: 'Dosya okunamadı veya analiz edilemedi.', variant: 'destructive' });
         }
-        console.error(error);
     } finally {
         setIsProcessing(false);
     }
@@ -235,3 +236,5 @@ export default function EOkulPage() {
     </div>
   );
 }
+
+    

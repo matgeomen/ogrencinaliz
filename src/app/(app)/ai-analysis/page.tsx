@@ -139,12 +139,13 @@ export default function AiAnalysisPage() {
       toast({ title: "AI Analizi başarıyla oluşturuldu." });
     } catch (error: any) {
       console.error("AI Analysis Error:", error);
-      if (error.message?.includes('API key not found')) {
+      const errorMessage = error.message?.toLowerCase() || '';
+      if (errorMessage.includes('api key not found') || errorMessage.includes('api key expired')) {
          toast({
-            title: "AI API Anahtarı Eksik",
+            title: "AI API Anahtarı Geçersiz veya Süresi Dolmuş",
             description: (
               <span>
-                Lütfen AI özelliklerini kullanmak için Ayarlar sayfasından API anahtarınızı girin. 
+                Lütfen AI özelliklerini kullanmak için Ayarlar sayfasından API anahtarınızı yenileyin veya girin. 
                 <Link href="/settings" className="underline font-semibold ml-1">Ayarlara Git</Link>
               </span>
             ),
@@ -505,3 +506,5 @@ export default function AiAnalysisPage() {
     </div>
   );
 }
+
+    

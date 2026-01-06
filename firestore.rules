@@ -3,29 +3,29 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper function to check if the user is an admin
     function isAdmin() {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      // Check if the user is an admin by looking up their role in their user document.
+      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Rules for the 'users' collection
     match /users/{userId} {
-      // Admins can read/write any user profile
-      // Users can only read/write their own profile
-      allow read, write: if isAdmin() || request.auth.uid == userId;
-    }
-
-    // Admins can read all user documents
-    match /users/{userId} {
+      // Allow users to create their own user document upon registration.
+      allow create: if request.auth.uid == userId;
+      
+      // Allow users to read/update their own profile. Admins can read/update any profile.
+      allow read, update: if request.auth.uid == userId || isAdmin();
+      
+      // Only admins can delete users (for now, this can be changed).
+      allow delete: if isAdmin();
+      
+      // Only admins can list all users.
       allow list: if isAdmin();
     }
     
-    // Rules for the 'results' subcollection
     match /users/{userId}/results/{resultId} {
-      // Admins can read/write any result
-      // Users can only read/write their own results
-      allow read, write: if isAdmin() || request.auth.uid == userId;
+      // A user can read, write, and delete their own results.
+      // An admin can read, write, and delete any user's results.
+      allow read, write, delete: if request.auth.uid == userId || isAdmin();
     }
   }
 }

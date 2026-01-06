@@ -32,7 +32,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, getDocs, collection } from 'firebase/firestore';
 import { useFirebase } from '@/firebase';
 
 
@@ -90,20 +90,27 @@ export default function LoginPage() {
   const onRegisterSubmit: SubmitHandler<RegisterFormValues> = async (data) => {
     setIsLoading(true);
     try {
+      // Check if there are any users already
+      const usersCollectionRef = collection(firestore, "users");
+      const usersSnapshot = await getDocs(usersCollectionRef);
+      const isFirstUser = usersSnapshot.empty;
+
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
 
-      // Save user to Firestore
+      // Save user to Firestore with appropriate role
       const userRef = doc(firestore, "users", user.uid);
       await setDoc(userRef, {
         uid: user.uid,
         email: user.email,
-        role: 'user', // Default role
+        role: isFirstUser ? 'admin' : 'user', // Assign 'admin' if first user
         createdAt: serverTimestamp(),
         storagePreference: 'local',
+        displayName: user.email?.split('@')[0] || 'Yeni Kullanıcı',
+        photoURL: '',
       });
       
-      toast({ title: 'Kayıt başarılı!', description: 'Giriş yapabilirsiniz.' });
+      toast({ title: 'Kayıt başarılı!', description: isFirstUser ? 'Admin olarak giriş yapılıyor...' : 'Giriş yapabilirsiniz.' });
       router.push('/dashboard');
     } catch (error: any) {
       toast({
@@ -178,7 +185,7 @@ export default function LoginPage() {
                 <CardHeader>
                     <CardTitle>Yeni Hesap Oluştur</CardTitle>
                     <CardDescription>Başlamak için bir hesap oluşturun.</CardDescription>
-                </CardHeader>
+                </Header>
                 <CardContent>
                     <Form {...registerForm}>
                         <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">

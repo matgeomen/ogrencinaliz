@@ -91,22 +91,22 @@ body {
 }
 
 .premium {
-  --background: 222 80% 8%;
+  --background: 225 30% 9%;
   --foreground: 210 40% 98%;
 
   --card: 222 50% 12%;
   --card-foreground: 210 40% 98%;
 
-  --popover: 222 80% 6%;
+  --popover: 225 30% 6%;
   --popover-foreground: 210 40% 98%;
 
   --primary: 217 91% 65%;
   --primary-foreground: 210 40% 98%;
 
-  --secondary: 217 33% 20%;
+  --secondary: 225 25% 15%;
   --secondary-foreground: 210 40% 98%;
 
-  --muted: 217 33% 17%;
+  --muted: 225 25% 15%;
   --muted-foreground: 215 20% 65%;
 
   --accent: 217 33% 22%;
@@ -116,31 +116,40 @@ body {
   --destructive-foreground: 210 40% 98%;
 
   --border: 217 33% 25%;
-  --input: 217 33% 20%;
+  --input: 225 25% 15%;
   --ring: 217 91% 65%;
   
   --radius: 0.75rem;
 
-  --sidebar-background: 222 60% 10%;
+  --sidebar-background: 225 25% 11%;
   --sidebar-foreground: 210 40% 98%;
   --sidebar-border: 217 33% 20%;
 }
 
 .premium body {
-    background: linear-gradient(135deg, hsl(222, 80%, 8%), hsl(240, 40%, 12%), hsl(222, 80%, 8%));
+    background: linear-gradient(-45deg, hsl(225, 30%, 9%), hsl(240, 20%, 7%), hsl(260, 30%, 10%), hsl(225, 30%, 9%));
     background-size: 400% 400%;
     animation: premium-gradient 15s ease infinite;
 }
 
-.premium .card, .premium [class*="bg-card"] {
+.premium .card, 
+.premium [class*="bg-card"], 
+.premium .bg-popover, 
+.premium .bg-secondary {
+    background-color: hsla(var(--card), 0.7);
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-    border: 1px solid hsla(var(--border), 0.3);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid hsla(var(--border), 0.2);
+}
+
+.premium button.bg-primary {
+    transition: all 0.2s ease-in-out;
 }
 
 .premium button.bg-primary:hover {
-    box-shadow: 0 4px 14px 0 hsl(var(--primary) / 30%);
+    box-shadow: 0 4px 20px 0 hsl(var(--primary) / 35%);
+    transform: translateY(-2px);
 }
 
 @layer base {

@@ -10,12 +10,22 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { StudentExamResult } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { User } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+
+const LESSON_COLORS = {
+  'Türkçe': '#8884d8',
+  'Matematik': '#82ca9d',
+  'Fen Bilimleri': '#ffc658',
+  'T.C. İnkılap Tarihi': '#ff8042',
+  'Din Kültürü': '#00C49F',
+  'İngilizce': '#FFBB28',
+};
+
 
 function StudentDetailModal({ student }: { student: StudentExamResult }) {
   const { studentData } = useData();
@@ -29,64 +39,79 @@ function StudentDetailModal({ student }: { student: StudentExamResult }) {
   const selectedExamResult = studentAllResults.find(r => r.exam_name === student.exam_name);
 
   const lessonData = selectedExamResult ? [
-    { name: 'Türkçe', net: selectedExamResult.turkce?.net ?? 0 },
-    { name: 'Matematik', net: selectedExamResult.mat?.net ?? 0 },
-    { name: 'Fen Bilimleri', net: selectedExamResult.fen?.net ?? 0 },
-    { name: 'T.C. İnkılap Tarihi', net: selectedExamResult.tarih?.net ?? 0 },
-    { name: 'Din Kültürü', net: selectedExamResult.din?.net ?? 0 },
-    { name: 'İngilizce', net: selectedExamResult.ing?.net ?? 0 },
+    { name: 'Türkçe', net: selectedExamResult.turkce?.net ?? 0, color: LESSON_COLORS['Türkçe'] },
+    { name: 'Matematik', net: selectedExamResult.mat?.net ?? 0, color: LESSON_COLORS['Matematik'] },
+    { name: 'Fen Bilimleri', net: selectedExamResult.fen?.net ?? 0, color: LESSON_COLORS['Fen Bilimleri'] },
+    { name: 'T.C. İnkılap Tarihi', net: selectedExamResult.tarih?.net ?? 0, color: LESSON_COLORS['T.C. İnkılap Tarihi'] },
+    { name: 'Din Kültürü', net: selectedExamResult.din?.net ?? 0, color: LESSON_COLORS['Din Kültürü'] },
+    { name: 'İngilizce', net: selectedExamResult.ing?.net ?? 0, color: LESSON_COLORS['İngilizce'] },
   ] : [];
 
   return (
-    <DialogContent className="sm:max-w-3xl">
+    <DialogContent className="sm:max-w-4xl">
       <DialogHeader>
         <div className="flex items-center gap-4">
-          <div className="bg-muted rounded-full p-2">
-            <User className="h-6 w-6 text-muted-foreground" />
+          <div className="bg-primary/10 text-primary rounded-full p-3">
+            <User className="h-6 w-6" />
           </div>
-          <DialogTitle className="text-2xl">{student.student_name}</DialogTitle>
-        </div>
-        <div className="grid grid-cols-3 gap-4 pt-4 text-center">
-            <div>
-                <p className="text-sm text-muted-foreground">Öğrenci No</p>
-                <p className="font-semibold">{student.student_no}</p>
-            </div>
-            <div>
-                <p className="text-sm text-muted-foreground">Sınıf</p>
-                <p className="font-semibold">{student.class}</p>
-            </div>
-            <div>
-                <p className="text-sm text-muted-foreground">Toplam Puan</p>
-                <p className="font-semibold text-primary">{student.toplam_puan.toFixed(2)}</p>
-            </div>
+          <DialogTitle className="text-2xl font-bold tracking-tight">{student.student_name}</DialogTitle>
         </div>
       </DialogHeader>
-      <div className="py-4 space-y-8">
+      <div className="py-4 space-y-6">
+         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+            <Card>
+                <CardHeader className="p-4">
+                    <p className="text-sm text-muted-foreground">Öğrenci No</p>
+                    <p className="text-2xl font-bold">{student.student_no}</p>
+                </CardHeader>
+            </Card>
+            <Card>
+                 <CardHeader className="p-4">
+                    <p className="text-sm text-muted-foreground">Sınıf</p>
+                    <p className="text-2xl font-bold">{student.class}</p>
+                </CardHeader>
+            </Card>
+            <Card>
+                 <CardHeader className="p-4">
+                    <p className="text-sm text-muted-foreground">Toplam Puan</p>
+                    <p className="text-2xl font-bold text-primary">{student.toplam_puan.toFixed(2)}</p>
+                </CardHeader>
+            </Card>
+        </div>
+
+        <Separator />
+        
         <div>
-            <h3 className="font-semibold mb-4 text-sm md:text-base">Ders Bazlı Net Dağılımı ({student.exam_name})</h3>
+            <h3 className="font-semibold mb-4 text-lg text-center">Ders Bazlı Net Dağılımı ({student.exam_name})</h3>
             <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={lessonData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" fontSize={10} tickLine={false} axisLine={false} tick={{dy: 5}}/>
+              <BarChart data={lessonData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} tick={{dy: 10}}/>
                 <YAxis />
                 <Tooltip contentStyle={{ background: "hsl(var(--background))", border: "1px solid hsl(var(--border))", borderRadius: "var(--radius)"}}/>
-                <Bar dataKey="net" fill="hsl(var(--primary))" name="Net Sayısı" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="net" name="Net Sayısı" radius={[4, 4, 0, 0]}>
+                    {lessonData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
         </div>
+        
+        <Separator />
+
         <div>
-            <h3 className="font-semibold mb-4 text-sm md:text-base">Deneme Geçmişi</h3>
+            <h3 className="font-semibold mb-4 text-lg text-center">Deneme Geçmişi</h3>
             <div className="space-y-4 max-h-60 overflow-y-auto pr-4">
                 {studentAllResults.map(result => (
-                    <div key={result.exam_name}>
+                    <div key={result.id} className="p-4 rounded-lg bg-secondary/50">
                         <div className="flex justify-between items-center">
-                            <p className="font-medium text-sm md:text-base">{result.exam_name}</p>
+                            <p className="font-medium">{result.exam_name}</p>
                             <div className="text-right">
-                                <p className="text-xs md:text-sm"><span className="text-muted-foreground">Net:</span> {result.toplam_net.toFixed(2)}</p>
-                                <p className="text-xs md:text-sm font-semibold"><span className="text-muted-foreground">Puan:</span> {result.toplam_puan.toFixed(2)}</p>
+                                <p className="text-sm"><span className="text-muted-foreground">Net:</span> {result.toplam_net.toFixed(2)}</p>
+                                <p className="text-sm font-semibold text-primary"><span className="text-muted-foreground font-normal">Puan:</span> {result.toplam_puan.toFixed(2)}</p>
                             </div>
                         </div>
-                        <Separator className="mt-2" />
                     </div>
                 ))}
             </div>

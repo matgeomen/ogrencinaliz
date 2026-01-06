@@ -90,6 +90,58 @@ body {
   }
 }
 
+.premium {
+  --background: 222 80% 8%;
+  --foreground: 210 40% 98%;
+
+  --card: 222 50% 12%;
+  --card-foreground: 210 40% 98%;
+
+  --popover: 222 80% 6%;
+  --popover-foreground: 210 40% 98%;
+
+  --primary: 217 91% 65%;
+  --primary-foreground: 210 40% 98%;
+
+  --secondary: 217 33% 20%;
+  --secondary-foreground: 210 40% 98%;
+
+  --muted: 217 33% 17%;
+  --muted-foreground: 215 20% 65%;
+
+  --accent: 217 33% 22%;
+  --accent-foreground: 210 40% 98%;
+
+  --destructive: 0 63% 40%;
+  --destructive-foreground: 210 40% 98%;
+
+  --border: 217 33% 25%;
+  --input: 217 33% 20%;
+  --ring: 217 91% 65%;
+  
+  --radius: 0.75rem;
+
+  --sidebar-background: 222 60% 10%;
+  --sidebar-foreground: 210 40% 98%;
+  --sidebar-border: 217 33% 20%;
+}
+
+.premium body {
+    background: linear-gradient(135deg, hsl(222, 80%, 8%), hsl(240, 40%, 12%), hsl(222, 80%, 8%));
+    background-size: 400% 400%;
+    animation: premium-gradient 15s ease infinite;
+}
+
+.premium .card, .premium [class*="bg-card"] {
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: 1px solid hsla(var(--border), 0.3);
+}
+
+.premium button.bg-primary:hover {
+    box-shadow: 0 4px 14px 0 hsl(var(--primary) / 30%);
+}
 
 @layer base {
   * {

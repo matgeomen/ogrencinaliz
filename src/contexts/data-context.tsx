@@ -26,71 +26,72 @@ interface DataContextType {
   setStoragePreference: (pref: StoragePreference) => void;
   apiKey: string | null;
   setApiKey: (key: string) => void;
-  userProfile: UserProfile | null;
+  userProfile: WithId<UserProfile> | null;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
   const [localData, setLocalData] = useState<WithId<StudentExamResult>[]>([]);
-  const [storagePreference, setStoragePreferenceState] = useState<StoragePreference>('local');
   const [selectedExam, setSelectedExam] = useState<string>('');
-  const [profileAvatar, setProfileAvatarState] = useState<string>('');
-  const [apiKey, setApiKeyState] = useState<string | null>(null);
-  const { toast } = useToast();
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   
-  const { firestore } = useFirebase();
-  const { user, isUserLoading } = useUser();
+  const { toast } = useToast();
+  const { firestore, user, isUserLoading } = useUser();
 
   const userProfileRef = useMemoFirebase(() => {
     return user && firestore ? doc(firestore, 'users', user.uid) : null;
   }, [user, firestore]);
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+  
+  // State for user settings, initialized from profile or local storage
+  const [storagePreference, setStoragePreferenceState] = useState<StoragePreference>('local');
+  const [profileAvatar, setProfileAvatarState] = useState<string>('');
+  const [apiKey, setApiKeyState] = useState<string | null>(null);
 
+  // Effect to load initial settings from userProfile or localStorage
   useEffect(() => {
-    if (isUserLoading || isProfileLoading) return;
-
-    // Prioritize cloud data, then local, then default
-    const pref = userProfile?.storagePreference || localStorage.getItem('storagePreference') as StoragePreference || 'local';
-    setStoragePreferenceState(pref);
-    localStorage.setItem('storagePreference', pref);
+    if (isProfileLoading || isUserLoading) return;
     
+    const pref = userProfile?.storagePreference || (localStorage.getItem('storagePreference') as StoragePreference) || 'local';
+    setStoragePreferenceState(pref);
+
     const avatar = userProfile?.photoURL || localStorage.getItem('profileAvatar');
     if (avatar) {
       setProfileAvatarState(avatar);
     } else {
-       const defaultAvatar = PlaceHolderImages.find(img => img.id === 'user-avatar');
-       if (defaultAvatar) setProfileAvatarState(defaultAvatar.imageUrl);
+      const defaultAvatar = PlaceHolderImages.find(img => img.id === 'user-avatar');
+      if (defaultAvatar) setProfileAvatarState(defaultAvatar.imageUrl);
     }
     
     const key = userProfile?.apiKey || localStorage.getItem('gemini_api_key');
     if (key) {
       setApiKeyState(key);
-    }
-    // Set Gemini API key for Genkit
-    if (typeof window !== 'undefined' && key) {
+      if (typeof window !== 'undefined') {
         process.env.GEMINI_API_KEY = key;
+      }
     }
-
-
+    
+    // Load local student data and set mock data if it's the very first launch
     const savedData = localStorage.getItem('studentData');
     if (savedData) {
       setLocalData(JSON.parse(savedData));
     } else {
+      // This is the first launch ever, load mock data
       const initialData = mockStudentData.map(d => ({...d, id: `${d.student_no}-${d.exam_name}`}));
       setLocalData(initialData);
       localStorage.setItem('studentData', JSON.stringify(initialData));
+      toast({ title: "Örnek Veriler Yüklendi", description: "Uygulamayı keşfetmeniz için örnek deneme sonuçları eklendi." });
     }
-  }, [userProfile, isUserLoading, isProfileLoading]);
+    setIsInitialLoad(false);
 
+  }, [userProfile, isProfileLoading, isUserLoading, toast]);
+  
 
   const setStoragePreference = (pref: StoragePreference) => {
     setStoragePreferenceState(pref);
     localStorage.setItem('storagePreference', pref);
-    if(user && firestore) {
-      setDoc(doc(firestore, 'users', user.uid), { storagePreference: pref }, { merge: true });
-    }
   };
   
   const setApiKey = (key: string) => {
@@ -99,6 +100,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (typeof window !== 'undefined') {
         process.env.GEMINI_API_KEY = key;
     }
+  }
+  
+  const setProfileAvatar = (url: string) => {
+    setProfileAvatarState(url);
+    localStorage.setItem('profileAvatar', url);
   }
 
   const resultsCollection = useMemoFirebase(() => {
@@ -111,6 +117,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const { data: cloudData, isLoading: isFirestoreLoading } = useCollection<StudentExamResult>(resultsCollection);
 
   const studentData = useMemo(() => {
+    if (isInitialLoad) return [];
+    
     if (storagePreference === 'cloud') {
       return cloudData || [];
     }
@@ -118,23 +126,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       return localData;
     }
     if (storagePreference === 'both') {
-      const allData = [...localData];
-      if (cloudData) {
-        cloudData.forEach(cd => {
-          const index = allData.findIndex(ld => ld.id === cd.id);
-          if (index !== -1) {
-            allData[index] = cd;
-          } else {
-            allData.push(cd);
-          }
-        });
-      }
-      return allData;
+      const allDataMap = new Map<string, WithId<StudentExamResult>>();
+      localData.forEach(ld => allDataMap.set(ld.id, ld));
+      (cloudData || []).forEach(cd => allDataMap.set(cd.id, cd));
+      return Array.from(allDataMap.values());
     }
     return [];
-  }, [localData, cloudData, storagePreference]);
+  }, [localData, cloudData, storagePreference, isInitialLoad]);
 
-  const loading = isFirestoreLoading || isUserLoading || isProfileLoading;
+  const loading = isFirestoreLoading || isUserLoading || isProfileLoading || isInitialLoad;
 
   const exams = useMemo(() => Array.from(new Set(studentData.map(d => d.exam_name))).sort(), [studentData]);
   const classes = useMemo(() => Array.from(new Set(studentData.map(d => d.class))).sort(), [studentData]);
@@ -144,31 +144,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       if (!selectedExam || !exams.includes(selectedExam)) {
         setSelectedExam(exams[0]);
       }
+    } else if (!loading && exams.length === 0) {
+        setSelectedExam('');
     }
   }, [exams, selectedExam, loading]);
-  
-  const setProfileAvatar = (url: string) => {
-    setProfileAvatarState(url);
-    localStorage.setItem('profileAvatar', url);
-     if(user && firestore) {
-      setDoc(doc(firestore, 'users', user.uid), { photoURL: url }, { merge: true });
-    }
-  }
+
 
   const addStudentData = useCallback(async (newData: StudentExamResult[]) => {
-    const dataWithIds = newData.map(item => ({...item, id: `${item.student_no}-${item.exam_name}`}));
+    const dataWithIds = newData.map(item => ({...item, id: `${item.student_no}-${item.exam_name}`.replace(/[\/.]/g, '-')}));
 
     if (storagePreference === 'local' || storagePreference === 'both') {
        setLocalData(prevData => {
-         const updatedData = [...prevData];
-         dataWithIds.forEach(item => {
-            const index = updatedData.findIndex(d => d.id === item.id);
-            if(index !== -1) {
-                updatedData[index] = item;
-            } else {
-                updatedData.push(item);
-            }
-         });
+         const dataMap = new Map(prevData.map(d => [d.id, d]));
+         dataWithIds.forEach(item => dataMap.set(item.id, item));
+         const updatedData = Array.from(dataMap.values());
          localStorage.setItem('studentData', JSON.stringify(updatedData));
          return updatedData;
        });
@@ -178,9 +167,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if ((storagePreference === 'cloud' || storagePreference === 'both') && firestore && user) {
         const batch = writeBatch(firestore);
         dataWithIds.forEach(item => {
-            const docId = item.id.replace(/[\/.]/g, '-');
-            const newDocRef = doc(firestore, 'users', user.uid, 'results', docId);
-            batch.set(newDocRef, item, { merge: true });
+            const docRef = doc(firestore, 'users', user.uid, 'results', item.id);
+            batch.set(docRef, item, { merge: true });
         });
 
         try {
@@ -190,7 +178,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             console.error("Failed to save data to Firestore:", error);
             toast({ title: "Firebase'e Kaydedilemedi", description: "Veriler buluta kaydedilirken bir hata oluştu.", variant: "destructive" });
         }
-    } else if (storagePreference === 'cloud' || storagePreference === 'both') {
+    } else if (storagePreference === 'cloud') {
         toast({ title: 'Bulut depolama aktif değil.', description: 'Lütfen giriş yapın ve profil sayfasından Firebase ayarlarını kontrol edin.', variant: 'destructive' });
     }
   }, [firestore, user, storagePreference, toast]);
@@ -214,7 +202,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                     batch.delete(doc.ref);
                 });
                 await batch.commit();
-                toast({ title: `"${examNameToDelete}" denemesi buluttan silindi.` });
             }
         } catch(error) {
             console.error("Error deleting exam from Firestore:", error);
@@ -224,7 +211,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, [firestore, user, storagePreference, toast]);
 
   const value: DataContextType = {
-    studentData: studentData || [],
+    studentData,
     addStudentData,
     deleteExam,
     exams,

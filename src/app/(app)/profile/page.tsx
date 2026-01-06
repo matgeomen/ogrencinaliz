@@ -15,27 +15,35 @@ import { useToast } from "@/hooks/use-toast"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useFirebase } from "@/firebase"
 import { cn } from "@/lib/utils"
-import { updateProfile } from "firebase/auth"
 import { doc, setDoc } from "firebase/firestore"
 
 type StoragePreference = 'local' | 'cloud' | 'both';
 
 export default function ProfilePage() {
-  const { profileAvatar, setProfileAvatar, storagePreference, setStoragePreference, userProfile } = useData();
-  const { auth, user, isUserLoading, firestore } = useFirebase();
+  const { 
+    profileAvatar, setProfileAvatar, 
+    storagePreference, setStoragePreference, 
+    userProfile, loading 
+  } = useData();
+  const { user, firestore } = useFirebase();
   const { toast } = useToast();
 
   const [displayName, setDisplayName] = useState('');
+  const [currentAvatar, setCurrentAvatar] = useState(profileAvatar);
+  const [currentStoragePref, setCurrentStoragePref] = useState(storagePreference);
 
   useEffect(() => {
-    if (user) {
-        setDisplayName(user.displayName || '');
-    }
     if (userProfile) {
         setDisplayName(userProfile.displayName || user?.displayName || '');
+        setCurrentAvatar(userProfile.photoURL || profileAvatar);
+        setCurrentStoragePref(userProfile.storagePreference || storagePreference);
+    } else if (user) {
+        setDisplayName(user.displayName || '');
+        setCurrentAvatar(profileAvatar);
+        setCurrentStoragePref(storagePreference);
     }
-  }, [user, userProfile]);
-
+  }, [user, userProfile, profileAvatar, storagePreference]);
+  
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (file) {
@@ -50,15 +58,12 @@ export default function ProfilePage() {
       const reader = new FileReader();
       reader.onload = (e) => {
         const result = e.target?.result as string;
-        setProfileAvatar(result); // This will handle both local and cloud saving via context
-        toast({
-          title: "Profil Resmi Güncellendi",
-          description: "Yeni profil resminiz başarıyla kaydedildi.",
-        });
+        setCurrentAvatar(result);
+        toast({ title: "Profil Resmi Hazır", description: "Değişiklikleri kaydetmek için butona basın." });
       };
       reader.readAsDataURL(file);
     }
-  }, [setProfileAvatar, toast]);
+  }, [toast]);
 
   const { getRootProps, getInputProps } = useDropzone({
     onDrop,
@@ -73,26 +78,21 @@ export default function ProfilePage() {
     }
 
     try {
-        // 1. Update local storage via context
-        setStoragePreference(storagePreference);
-        localStorage.setItem('displayName', displayName);
+        // Update local state and local storage immediately
+        setProfileAvatar(currentAvatar);
+        setStoragePreference(currentStoragePref);
 
-        // 2. Update Firebase Auth Profile (only for display name)
-        await updateProfile(user, {
-            displayName: displayName,
-        });
-
-        // 3. Update Firestore Document with all data, including photoURL
+        // Update Firestore Document with all data
         const userDocRef = doc(firestore, "users", user.uid);
         await setDoc(userDocRef, {
             displayName: displayName,
-            photoURL: profileAvatar,
-            storagePreference: storagePreference,
+            photoURL: currentAvatar,
+            storagePreference: currentStoragePref,
         }, { merge: true });
 
         toast({
             title: "Profil ve Ayarlar Kaydedildi",
-            description: `Bilgileriniz hem yerel olarak hem de bulutta güncellendi.`,
+            description: `Bilgileriniz başarıyla kaydedildi.`,
         });
 
     } catch (error: any) {
@@ -104,8 +104,14 @@ export default function ProfilePage() {
         });
     }
   }
-
-  const canConnectToFirebase = auth && user && !isUserLoading;
+  
+  if (loading) {
+      return (
+          <div className="flex h-[80vh] w-full items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      );
+  }
 
   return (
     <div className="space-y-6">
@@ -122,7 +128,7 @@ export default function ProfilePage() {
               <div className="flex flex-col items-center gap-2 text-center">
                   <div {...getRootProps()} className="relative cursor-pointer group">
                       <Avatar className="h-36 w-36">
-                          <AvatarImage src={profileAvatar || user?.photoURL} alt="Profile Avatar"/>
+                          <AvatarImage src={currentAvatar} alt="Profile Avatar"/>
                           <AvatarFallback>{displayName?.substring(0, 2) || user?.email?.substring(0,2) || 'XX'}</AvatarFallback>
                       </Avatar>
                       <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
@@ -152,7 +158,7 @@ export default function ProfilePage() {
                 <CardDescription>Uygulama verilerinin nerede saklanacağını seçin.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-                <RadioGroup value={storagePreference} onValueChange={(value) => setStoragePreference(value as StoragePreference)} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <RadioGroup value={currentStoragePref} onValueChange={(value) => setCurrentStoragePref(value as StoragePreference)} className="grid grid-cols-1 md:grid-cols-3 gap-4">
                      <Label className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary cursor-pointer">
                         <RadioGroupItem value="local" className="sr-only" />
                         <WifiOff className="h-8 w-8 mb-2" />
@@ -177,23 +183,23 @@ export default function ProfilePage() {
                     </Label>
                 </RadioGroup>
 
-                {(storagePreference === 'cloud' || storagePreference === 'both') && (
+                {(currentStoragePref === 'cloud' || currentStoragePref === 'both') && (
                     <Card className="bg-secondary/50">
                          <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-base"><CloudCog className="h-5 w-5 text-blue-600"/> Firebase Yapılandırması</CardTitle>
                         </CardHeader>
                         <CardContent>
-                             <Alert variant={canConnectToFirebase ? "default" : "destructive"} className={cn(
-                                canConnectToFirebase 
+                             <Alert variant={user ? "default" : "destructive"} className={cn(
+                                user 
                                 ? "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800"
                                 : "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800"
                             )}>
-                                <Info className={cn("h-4 w-4", canConnectToFirebase ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")} />
-                                <AlertTitle className={cn("font-semibold", canConnectToFirebase ? "text-green-800 dark:text-green-300" : "text-red-800 dark:text-red-300")}>
-                                    {canConnectToFirebase ? "Firebase Bağlantısı Aktif" : "Firebase Bağlantısı Kurulamadı"}
+                                <Info className={cn("h-4 w-4", user ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")} />
+                                <AlertTitle className={cn("font-semibold", user ? "text-green-800 dark:text-green-300" : "text-red-800 dark:text-red-300")}>
+                                    {user ? "Firebase Bağlantısı Aktif" : "Firebase Bağlantısı Kurulamadı"}
                                 </AlertTitle>
-                                <AlertDescription className={cn("text-sm", canConnectToFirebase ? "text-green-700 dark:text-green-300/80" : "text-red-700 dark:text-red-300/80")}>
-                                    {canConnectToFirebase ? "Uygulama başarıyla Firebase projenize bağlandı." : "Firebase'e bağlanılamadı. Lütfen internet bağlantınızı ve ayarlarınızı kontrol edin."}
+                                <AlertDescription className={cn("text-sm", user ? "text-green-700 dark:text-green-300/80" : "text-red-700 dark:text-red-300/80")}>
+                                    {user ? "Uygulama başarıyla Firebase projenize bağlandı." : "Firebase'e bağlanılamadı. Lütfen internet bağlantınızı ve ayarlarınızı kontrol edin."}
                                 </AlertDescription>
                             </Alert>
                         </CardContent>

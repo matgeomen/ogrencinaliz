@@ -97,20 +97,17 @@ const processExamDataFlow = ai.defineFlow(
     outputSchema: ProcessExamDataOutputSchema,
   },
   async input => {
-    // İçeriğin çok uzun olmasını engellemek için bir kısmını alabiliriz,
-    // ancak şimdilik tam içeriği gönderiyoruz. Gerekirse burada kırpma yapılabilir.
-    const MAX_LENGTH = 20000;
-    if (input.fileContent.length > MAX_LENGTH) {
-        input.fileContent = input.fileContent.substring(0, MAX_LENGTH);
+    // Diagnostic check for API Key
+    const key = process.env.GEMINI_API_KEY;
+    if (!key) {
+      throw new Error("GEMINI_API_KEY env bulunamadı. Lütfen sunucu ortam değişkenlerinizi kontrol edin.");
+    }
+    if (key.includes("YOUR_") || key.length < 20) {
+      throw new Error("GEMINI_API_KEY geçersiz görünüyor. Lütfen doğru bir anahtar girdiğinizden emin olun.");
     }
 
-    const key = process.env.GEMINI_API_KEY;
-    if (!key) throw new Error("GEMINI_API_KEY env bulunamadı");
-    if (key.includes("YOUR_") || key.length < 20) throw new Error("GEMINI_API_KEY geçersiz görünüyor");
-    
     const {output} = await prompt(input);
     return output!;
   }
 );
-
     

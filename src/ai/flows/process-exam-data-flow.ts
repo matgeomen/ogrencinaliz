@@ -1,5 +1,5 @@
 // src/ai/flows/process-exam-data-flow.ts
-// localStorage key ismi düzeltildi
+// Fetch API kullanarak - Ekstra paket gerektirmez
 
 interface ProcessExamDataInput {
   fileName: string;
@@ -68,7 +68,7 @@ function chunkText(text: string, maxChunkSize: number = 8000): string[] {
   return chunks;
 }
 
-// Gemini API çağrısı (Fetch ile)
+// Gemini API çağrısı (Fetch ile) - Birden fazla model adını dene
 async function callGeminiAPI(
   apiKey: string,
   prompt: string
@@ -90,7 +90,6 @@ async function callGeminiAPI(
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
       
-      const response = await fetch(url, {
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -149,12 +148,13 @@ async function callGeminiAPI(
 
       // 404 ise bir sonraki model adını dene
       console.log(`❌ Model bulunamadı: ${modelName}`);
+      lastError = new Error(`404: Model ${modelName} bulunamadı`);
       
     } catch (error: any) {
       lastError = error;
       
       // 404 dışındaki hataları hemen fırlat
-      if (!error.message?.includes('404')) {
+      if (!error.message?.includes('404') && response.status !== 404) {
         throw error;
       }
     }

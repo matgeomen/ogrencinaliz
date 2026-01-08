@@ -73,67 +73,97 @@ async function callGeminiAPI(
   apiKey: string,
   prompt: string
 ): Promise<string> {
-  // Gemini Pro (en stabil model)
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: prompt,
-              },
-            ],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.1,
-          topK: 32,
-          topP: 1,
-          maxOutputTokens: 8192,
+  // Farklı model adlarını sırayla dene
+  const modelNames = [
+    'gemini-1.5-flash-latest',
+    'gemini-1.5-flash',
+    'gemini-1.5-pro-latest', 
+    'gemini-1.5-pro',
+    'gemini-pro',
+    'models/gemini-1.5-flash-latest',
+    'models/gemini-pro'
+  ];
+
+  let lastError: any = null;
+
+  for (const modelName of modelNames) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+      
+      const response = await fetch(url, {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-      }),
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: prompt,
+                },
+              ],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.1,
+            topK: 32,
+            topP: 1,
+            maxOutputTokens: 8192,
+          },
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (!data.candidates || data.candidates.length === 0) {
+          throw new Error('API yanıt vermedi');
+        }
+
+        console.log(`✅ Başarılı model: ${modelName}`);
+        return data.candidates[0].content.parts[0].text;
+      }
+
+      // 404 değilse (örn. 403, 429), hatayı fırlat
+      if (response.status !== 404) {
+        const errorData = await response.json().catch(() => ({}));
+        
+        if (response.status === 403 || response.status === 400) {
+          throw new Error(
+            'API anahtarı geçersiz veya yetkisiz. Lütfen Ayarlar sayfasından geçerli bir API anahtarı girin.'
+          );
+        }
+        
+        if (response.status === 429) {
+          throw new Error(
+            'API kota limiti aşıldı. Lütfen birkaç dakika bekleyip tekrar deneyin.'
+          );
+        }
+
+        throw new Error(
+          `API hatası (${response.status}): ${errorData.error?.message || 'Bilinmeyen hata'}`
+        );
+      }
+
+      // 404 ise bir sonraki model adını dene
+      console.log(`❌ Model bulunamadı: ${modelName}`);
+      
+    } catch (error: any) {
+      lastError = error;
+      
+      // 404 dışındaki hataları hemen fırlat
+      if (!error.message?.includes('404')) {
+        throw error;
+      }
     }
+  }
+
+  // Tüm model isimleri denendi, hiçbiri çalışmadı
+  throw new Error(
+    'Gemini modeli bulunamadı. API anahtarınızın geçerli olduğundan ve Google AI Studio\'dan (aistudio.google.com) oluşturulduğundan emin olun.'
   );
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    
-    if (response.status === 404) {
-      throw new Error(
-        'Gemini modeli bulunamadı. API anahtarınızın geçerli olduğundan ve Gemini API erişiminizin olduğundan emin olun.'
-      );
-    }
-    
-    if (response.status === 403 || response.status === 400) {
-      throw new Error(
-        'API anahtarı geçersiz veya yetkisiz. Lütfen Ayarlar sayfasından geçerli bir API anahtarı girin.'
-      );
-    }
-    
-    if (response.status === 429) {
-      throw new Error(
-        'API kota limiti aşıldı. Lütfen birkaç dakika bekleyip tekrar deneyin.'
-      );
-    }
-
-    throw new Error(
-      `API hatası (${response.status}): ${errorData.error?.message || 'Bilinmeyen hata'}`
-    );
-  }
-
-  const data = await response.json();
-  
-  if (!data.candidates || data.candidates.length === 0) {
-    throw new Error('API yanıt vermedi');
-  }
-
-  return data.candidates[0].content.parts[0].text;
 }
 
 // Tek bir chunk'ı işle

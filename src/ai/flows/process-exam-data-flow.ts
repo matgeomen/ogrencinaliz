@@ -27,29 +27,18 @@ interface StudentExamResult {
   };
 }
 
-// API anahtarını localStorage'dan al - Tüm olası key isimlerini kontrol et
+// API anahtarını localStorage'dan al
 function getApiKey(): string {
   if (typeof window === 'undefined') return '';
   
-  // Olası tüm key isimlerini kontrol et
-  const possibleKeys = [
-    'geminiApiKey',
-    'GEMINI_API_KEY', 
-    'apiKey',
-    'ai_api_key',
-    'gemini_api_key'
-  ];
+  // Context tarafından kullanılan key ismi: gemini_api_key
+  const apiKey = localStorage.getItem('gemini_api_key');
   
-  for (const key of possibleKeys) {
-    const value = localStorage.getItem(key);
-    if (value) {
-      console.log(`API Key bulundu: ${key}`);
-      return value;
-    }
+  if (!apiKey) {
+    console.error('API Key bulunamadı. Lütfen Ayarlar sayfasından API anahtarınızı kaydedin.');
   }
   
-  console.error('API Key bulunamadı. localStorage keys:', Object.keys(localStorage));
-  return '';
+  return apiKey || '';
 }
 
 // Metni parçalara böl (chunking)

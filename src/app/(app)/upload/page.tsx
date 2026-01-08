@@ -74,10 +74,13 @@ export default function UploadPage() {
             throw new Error('Desteklenmeyen dosya türü');
         }
 
-        const aiResult = await processExamData({
-            fileName: file.name,
-            fileContent: fileContent,
-        });
+      // Mevcut kod (değişiklik gerekmez):
+const aiResult = await processExamData({
+    fileName: file.name,
+    fileContent: fileContent,
+}, (chunkMessage) => {
+    setStatusMessage(`İşleniyor: ${file.name} - ${chunkMessage}`);
+});
 
         if (aiResult && aiResult.results.length > 0) {
             addStudentData(aiResult.results);

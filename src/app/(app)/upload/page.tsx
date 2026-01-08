@@ -14,6 +14,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { processExamData } from '@/ai/flows/process-exam-data-flow';
 import Link from 'next/link';
+import { Progress } from '@/components/ui/progress';
 
 // Set worker source
 if (typeof window !== 'undefined') {
@@ -26,6 +27,8 @@ export default function UploadPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   const { addStudentData } = useData();
+  const [statusMessage, setStatusMessage] = useState('');
+  const [progress, setProgress] = useState(0);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     setFiles(prev => [...prev, ...acceptedFiles].filter((f, i, self) => self.findIndex(t => t.name === f.name) === i));
@@ -49,77 +52,114 @@ export default function UploadPage() {
       return;
     }
     setIsProcessing(true);
+    setStatusMessage('');
+    setProgress(0);
+
     let successCount = 0;
     let errorCount = 0;
 
-    for (const file of files) {
-      try {
-        let fileContent = '';
-        if (file.name.endsWith('.xlsx')) {
-            const data = await file.arrayBuffer();
-            const workbook = XLSX.read(data, { type: 'array' });
-            const sheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[sheetName];
-            const json = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
-            fileContent = JSON.stringify(json);
-        } else if (file.name.endsWith('.pdf')) {
-            const arrayBuffer = await file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i);
-                const text = await page.getTextContent();
-                fileContent += text.items.map(item => ('str' in item ? item.str : '')).join(' ');
+    const totalFiles = files.length;
+
+    for (let i = 0; i < totalFiles; i++) {
+        const file = files[i];
+        const currentProgress = ((i + 1) / totalFiles) * 100;
+        
+        try {
+            setStatusMessage(`Dosya ${i + 1}/${totalFiles} okunuyor: ${file.name}`);
+            let fileContent = '';
+            if (file.name.endsWith('.xlsx')) {
+                const data = await file.arrayBuffer();
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const json = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+                fileContent = JSON.stringify(json);
+            } else if (file.name.endsWith('.pdf')) {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+                for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                    const page = await pdf.getPage(pageNum);
+                    const text = await page.getTextContent();
+                    fileContent += text.items.map(item => ('str' in item ? item.str : '')).join(' ');
+                }
+            } else {
+                throw new Error('Desteklenmeyen dosya türü');
             }
-        } else {
-            throw new Error('Desteklenmeyen dosya türü');
-        }
 
-      // Mevcut kod (değişiklik gerekmez):
-const aiResult = await processExamData({
-    fileName: file.name,
-    fileContent: fileContent,
-}, (chunkMessage) => {
-    setStatusMessage(`İşleniyor: ${file.name} - ${chunkMessage}`);
-});
-
-        if (aiResult && aiResult.results.length > 0) {
-            addStudentData(aiResult.results);
-            successCount++;
-        } else {
-             throw new Error("AI veriyi işleyemedi veya dosyada sonuç bulunamadı.");
-        }
-
-      } catch (error: any) {
-        console.error("File Processing Error:", error);
-        const errorMessage = error.message?.toLowerCase() || '';
-        if (errorMessage.includes('api key not found') || errorMessage.includes('api key expired')) {
-            toast({
-                title: "AI API Anahtarı Geçersiz veya Süresi Dolmuş",
-                description: (
-                  <span>
-                    Lütfen AI özelliklerini kullanmak için Ayarlar sayfasından API anahtarınızı yenileyin veya girin. 
-                    <Link href="/settings" className="underline font-semibold ml-1">Ayarlara Git</Link>
-                  </span>
-                ),
-                variant: "destructive",
-                duration: 10000,
+            setStatusMessage(`Dosya AI tarafından işleniyor: ${file.name}`);
+            
+            // onProgress callback'i tanımlı olarak gönder
+            const aiResult = await processExamData({
+                fileName: file.name,
+                fileContent: fileContent,
+            }, (progressMessage: string) => {
+                // Progress mesajlarını güvenli bir şekilde göster
+                if (progressMessage) {
+                    setStatusMessage(`${file.name}: ${progressMessage}`);
+                }
             });
-        } else {
-            toast({ title: `Hata: ${file.name}`, description: error.message || 'Dosya işlenemedi.', variant: 'destructive' });
+
+            if (aiResult && aiResult.results.length > 0) {
+                addStudentData(aiResult.results);
+                successCount++;
+            } else {
+                throw new Error("AI veriyi işleyemedi veya dosyada sonuç bulunamadı.");
+            }
+
+        } catch (error: any) {
+            console.error("File Processing Error:", error);
+            const errorMessage = error.message?.toLowerCase() || '';
+            
+            if (errorMessage.includes('api key') || errorMessage.includes('api anahtarı')) {
+                toast({
+                    title: "AI API Anahtarı Geçersiz veya Eksik",
+                    description: (
+                        <span>
+                            Lütfen AI özelliklerini kullanmak için Ayarlar sayfasından API anahtarınızı girin ve kaydedin.
+                            <Link href="/settings" className="underline font-semibold ml-1">Ayarlara Git</Link>
+                        </span>
+                    ),
+                    variant: "destructive",
+                    duration: 10000,
+                });
+            } else if (errorMessage.includes('quota') || errorMessage.includes('429')) {
+                toast({ 
+                    title: `API Limiti Aşıldı`, 
+                    description: 'Gemini API kotanız dolmuş olabilir. Birkaç dakika bekleyip tekrar deneyin.', 
+                    variant: 'destructive',
+                    duration: 8000
+                });
+            } else {
+                toast({ 
+                    title: `Hata: ${file.name}`, 
+                    description: error.message || 'Dosya işlenemedi.', 
+                    variant: 'destructive' 
+                });
+            }
+            errorCount++;
         }
-        errorCount++;
-      }
+        setProgress(currentProgress);
     }
     
     if (successCount > 0) {
-      toast({ title: "İşlem Tamamlandı", description: `${successCount} dosya AI tarafından başarıyla işlendi ve veriler eklendi.` });
+      toast({ 
+        title: "İşlem Tamamlandı", 
+        description: `${successCount} dosya AI tarafından başarıyla işlendi ve veriler eklendi.`,
+        duration: 5000
+      });
     }
     if (errorCount > 0 && successCount === 0) {
-       toast({ title: "İşlem Başarısız", description: `${errorCount} dosya işlenirken hata oluştu.`, variant: 'destructive' });
+       toast({ 
+        title: "İşlem Başarısız", 
+        description: `${errorCount} dosya işlenirken hata oluştu.`, 
+        variant: 'destructive' 
+      });
     }
 
     setIsProcessing(false);
     setFiles([]); // Clear files after processing
+    setStatusMessage('');
+    setProgress(0);
   };
 
   return (
@@ -167,10 +207,17 @@ const aiResult = await processExamData({
                   </li>
                 ))}
               </ul>
-              <Button onClick={processFiles} disabled={isProcessing || files.length === 0} className="w-full sm:w-auto">
-                {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
-                Yükle ve İşle
-              </Button>
+              {!isProcessing ? (
+                <Button onClick={processFiles} disabled={files.length === 0} className="w-full sm:w-auto">
+                    <UploadCloud className="mr-2 h-4 w-4" />
+                    Yükle ve İşle
+                </Button>
+              ) : (
+                <div className="pt-4 space-y-2">
+                    <Progress value={progress} className="w-full" />
+                    <p className="text-sm text-muted-foreground text-center">{statusMessage}</p>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
@@ -207,5 +254,3 @@ const aiResult = await processExamData({
     </div>
   );
 }
-
-    

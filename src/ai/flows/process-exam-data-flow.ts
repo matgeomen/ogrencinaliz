@@ -1,6 +1,5 @@
 // src/ai/flows/process-exam-data-flow.ts
-
-import { GoogleGenerativeAI } from '@google/generative-ai';
+// Fetch API kullanarak - Ekstra paket gerektirmez
 
 interface ProcessExamDataInput {
   fileName: string;
@@ -61,16 +60,81 @@ function chunkText(text: string, maxChunkSize: number = 8000): string[] {
   return chunks;
 }
 
+// Gemini API çağrısı (Fetch ile)
+async function callGeminiAPI(
+  apiKey: string,
+  prompt: string
+): Promise<string> {
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                text: prompt,
+              },
+            ],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.1,
+          topK: 32,
+          topP: 1,
+          maxOutputTokens: 8192,
+        },
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    
+    if (response.status === 404) {
+      throw new Error(
+        'Gemini modeli bulunamadı. API anahtarınızın geçerli olduğundan ve Gemini API erişiminizin olduğundan emin olun.'
+      );
+    }
+    
+    if (response.status === 403) {
+      throw new Error(
+        'API anahtarı geçersiz veya yetkisiz. Lütfen Ayarlar sayfasından geçerli bir API anahtarı girin.'
+      );
+    }
+    
+    if (response.status === 429) {
+      throw new Error(
+        'API kota limiti aşıldı. Lütfen birkaç dakika bekleyip tekrar deneyin.'
+      );
+    }
+
+    throw new Error(
+      `API hatası (${response.status}): ${errorData.error?.message || 'Bilinmeyen hata'}`
+    );
+  }
+
+  const data = await response.json();
+  
+  if (!data.candidates || data.candidates.length === 0) {
+    throw new Error('API yanıt vermedi');
+  }
+
+  return data.candidates[0].content.parts[0].text;
+}
+
 // Tek bir chunk'ı işle
 async function processChunk(
-  genAI: GoogleGenerativeAI,
+  apiKey: string,
   chunk: string,
   fileName: string,
   chunkIndex: number,
   totalChunks: number
 ): Promise<any> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' }); // Flash daha hızlı ve ucuz
-
   const prompt = `
 Sen bir sınav sonuçları analiz asistanısın. Verilen dosya içeriğinden öğrenci sınav sonuçlarını çıkar.
 
@@ -114,9 +178,7 @@ Bu içerikten şu bilgileri çıkar:
 - Sayısal değerler number tipinde olmalı
 `;
 
-  const result = await model.generateContent(prompt);
-  const response = result.response;
-  const text = response.text();
+  const text = await callGeminiAPI(apiKey, prompt);
 
   // JSON'u temizle ve parse et
   const jsonText = text
@@ -144,7 +206,6 @@ export async function processExamData(
     throw new Error('API anahtarı bulunamadı. Lütfen Ayarlar sayfasından API anahtarınızı girin.');
   }
 
-  const genAI = new GoogleGenerativeAI(apiKey);
   const { fileName, fileContent } = input;
 
   // Dosya boyutunu kontrol et
@@ -168,7 +229,7 @@ export async function processExamData(
 
     try {
       const chunkResult = await processChunk(
-        genAI,
+        apiKey,
         chunks[i],
         fileName,
         i,
@@ -189,13 +250,6 @@ export async function processExamData(
       }
     } catch (error: any) {
       console.error(`Chunk ${i + 1} işlenirken hata:`, error);
-      
-      // Model bulunamadı hatası
-      if (error.message?.includes('404') || error.message?.includes('not found')) {
-        throw new Error(
-          'Gemini modeli bulunamadı. API anahtarınızın geçerli olduğundan ve Gemini API erişiminizin olduğundan emin olun.'
-        );
-      }
       
       // Diğer hatalar için devam et (bazı chunk'lar veri içermeyebilir)
       if (i === chunks.length - 1 && allStudents.length === 0) {
@@ -247,7 +301,8 @@ export async function processExamDataWithRetry(
       // API key hatası veya model bulunamadı hatası için tekrar deneme
       if (
         error.message?.toLowerCase().includes('api key') ||
-        error.message?.toLowerCase().includes('not found')
+        error.message?.toLowerCase().includes('not found') ||
+        error.message?.toLowerCase().includes('geçersiz')
       ) {
         throw error; // Bu hataları hemen fırlat
       }

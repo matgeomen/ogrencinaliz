@@ -1,5 +1,5 @@
 // src/ai/flows/process-exam-data-flow.ts
-// Fetch API kullanarak - Ekstra paket gerektirmez
+// localStorage key ismi düzeltildi
 
 interface ProcessExamDataInput {
   fileName: string;
@@ -27,10 +27,29 @@ interface StudentExamResult {
   };
 }
 
-// API anahtarını localStorage'dan al
+// API anahtarını localStorage'dan al - Tüm olası key isimlerini kontrol et
 function getApiKey(): string {
   if (typeof window === 'undefined') return '';
-  return localStorage.getItem('geminiApiKey') || '';
+  
+  // Olası tüm key isimlerini kontrol et
+  const possibleKeys = [
+    'geminiApiKey',
+    'GEMINI_API_KEY', 
+    'apiKey',
+    'ai_api_key',
+    'gemini_api_key'
+  ];
+  
+  for (const key of possibleKeys) {
+    const value = localStorage.getItem(key);
+    if (value) {
+      console.log(`API Key bulundu: ${key}`);
+      return value;
+    }
+  }
+  
+  console.error('API Key bulunamadı. localStorage keys:', Object.keys(localStorage));
+  return '';
 }
 
 // Metni parçalara böl (chunking)
@@ -101,7 +120,7 @@ async function callGeminiAPI(
       );
     }
     
-    if (response.status === 403) {
+    if (response.status === 403 || response.status === 400) {
       throw new Error(
         'API anahtarı geçersiz veya yetkisiz. Lütfen Ayarlar sayfasından geçerli bir API anahtarı girin.'
       );
@@ -203,7 +222,7 @@ export async function processExamData(
   const apiKey = getApiKey();
 
   if (!apiKey) {
-    throw new Error('API anahtarı bulunamadı. Lütfen Ayarlar sayfasından API anahtarınızı girin.');
+    throw new Error('API anahtarı bulunamadı. Lütfen Ayarlar sayfasından API anahtarınızı girin ve kaydedin.');
   }
 
   const { fileName, fileContent } = input;
@@ -302,7 +321,8 @@ export async function processExamDataWithRetry(
       if (
         error.message?.toLowerCase().includes('api key') ||
         error.message?.toLowerCase().includes('not found') ||
-        error.message?.toLowerCase().includes('geçersiz')
+        error.message?.toLowerCase().includes('geçersiz') ||
+        error.message?.toLowerCase().includes('bulunamadı')
       ) {
         throw error; // Bu hataları hemen fırlat
       }
